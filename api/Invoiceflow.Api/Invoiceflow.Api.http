@@ -1,0 +1,5 @@
+@Invoiceflow.Api_HostAddress = http://localhost:5126
+
+GET {{Invoiceflow.Api_HostAddress}}/api/health
+Accept: application/json
+

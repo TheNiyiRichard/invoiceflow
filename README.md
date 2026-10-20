@@ -34,7 +34,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 | Day | Date | What I built |
 | --- | --- | --- |
 | 01 | Oct 19 | Repository structure |
-
+| 02 | Oct 20 | ASP.NET Core API with health check and Swagger |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
