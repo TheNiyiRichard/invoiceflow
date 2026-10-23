@@ -1,3 +1,5 @@
+using Invoiceflow.Api.Data;
+using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Security: don't tell the world which web server we run
@@ -6,6 +8,11 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Connection string 'Default' missing. Set it with dotnet user-secrets.");
+
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 var app = builder.Build();
 
 // API docs only on my own machine, never in production
@@ -22,5 +29,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-
+app.MapHealthChecks("/api/health/db");
 app.Run();
