@@ -38,6 +38,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 | 03 | Oct 21 | React app with design tokens and live API status |
 | 04 | Oct 22 | EF Core + SQL Server with database health check |
 | 05 | Oct 23 | Client entity, first migration and seeded demo clients |
+| 06 | Oct 24 | Clients CRUD endpoints with DTOs and validation |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
