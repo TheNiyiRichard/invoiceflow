@@ -29,6 +29,32 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - `api/`: ASP.NET Core Web API
 - `web/`: React front end
 
+## Run it locally
+
+**You need:** .NET 10 SDK · Node.js LTS · SQL Server 2022 (Developer edition)
+
+**API** (terminal 1, from the repo root)
+```powershell
+dotnet tool restore
+dotnet dev-certs https --trust
+dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost;Database=InvoiceflowDev;Trusted_Connection=True;TrustServerCertificate=True" --project api/Invoiceflow.Api
+dotnet ef database update --project api/Invoiceflow.Api
+dotnet run --project api/Invoiceflow.Api
+```
+
+**Web** (terminal 2)
+```powershell
+cd web
+npm ci
+npm run dev
+```
+
+| URL | What it is |
+| --- | --- |
+| http://localhost:5173 | React app (calls the API through the Vite proxy) |
+| https://localhost:7171/swagger | API docs (development only) |
+| https://localhost:7171/api/health/db | Database health: Healthy / Unhealthy |
+
 ## Build log
 
 | Day | Date | What I built |
@@ -39,6 +65,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 | 04 | Oct 22 | EF Core + SQL Server with database health check |
 | 05 | Oct 23 | Client entity, first migration and seeded demo clients |
 | 06 | Oct 24 | Clients CRUD endpoints with DTOs and validation |
+| 07 | Oct 25 | Week 1 review: setup guide, HTTPS by default, dependency audit |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
