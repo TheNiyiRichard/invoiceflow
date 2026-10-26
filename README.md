@@ -66,6 +66,7 @@ npm run dev
 | 05 | Oct 23 | Client entity, first migration and seeded demo clients |
 | 06 | Oct 24 | Clients CRUD endpoints with DTOs and validation |
 | 07 | Oct 25 | Week 1 review: setup guide, HTTPS by default, dependency audit |
+| 08 | Oct 26 | ASP.NET Core Identity user store and migration |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
