@@ -17,7 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString
 builder.Services.AddIdentityCore<ApplicationUser>(o =>
 {
     o.User.RequireUniqueEmail = true;
-    o.Password.RequiredLength = 12;
+    o.Password.RequiredLength = 15;
     o.Password.RequiredUniqueChars = 4;
     o.Password.RequireDigit = false;
     o.Password.RequireLowercase = false;
