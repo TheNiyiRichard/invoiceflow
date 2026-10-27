@@ -1,6 +1,7 @@
 using Invoiceflow.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Invoiceflow.Api.Models;
+using Invoiceflow.Api.Auth;
 var builder = WebApplication.CreateBuilder(args);
 
 // Security: don't tell the world which web server we run
@@ -13,8 +14,18 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' missing. Set it with dotnet user-secrets.");
 
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
-builder.Services.AddIdentityCore<ApplicationUser>()
-    .AddEntityFrameworkStores<AppDbContext>();
+builder.Services.AddIdentityCore<ApplicationUser>(o =>
+{
+    o.User.RequireUniqueEmail = true;
+    o.Password.RequiredLength = 12;
+    o.Password.RequiredUniqueChars = 4;
+    o.Password.RequireDigit = false;
+    o.Password.RequireLowercase = false;
+    o.Password.RequireUppercase = false;
+    o.Password.RequireNonAlphanumeric = false;
+})
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddPasswordValidator<CommonPasswordValidator>();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 var app = builder.Build();
 

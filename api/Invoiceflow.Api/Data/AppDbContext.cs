@@ -12,6 +12,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         base.OnModelCreating(modelBuilder); // builds the Identity tables, must come first
 
+        modelBuilder.Entity<ApplicationUser>()
+            .HasIndex(u => u.NormalizedEmail)
+            .IsUnique()
+            .HasDatabaseName("EmailIndex");
+
         modelBuilder.Entity<Client>(c =>
         {
             c.Property(x => x.Name).HasMaxLength(200).IsRequired();
