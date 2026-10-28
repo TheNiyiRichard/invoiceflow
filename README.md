@@ -68,6 +68,7 @@ npm run dev
 | 07 | Oct 25 | Week 1 review: setup guide, HTTPS by default, dependency audit |
 | 08 | Oct 26 | ASP.NET Core Identity user store and migration |
 | 09 | Oct 27 | Register endpoint with strong password rules and unique emails |
+| 10 | Oct 28 | Cookie login and logout (HttpOnly, Secure, SameSite=Strict) |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

@@ -11,3 +11,13 @@ public class RegisterInput
     [Required, StringLength(128)]
     public string Password { get; set; } = "";
 }
+public class LoginInput
+{
+    [Required, EmailAddress, StringLength(254)]
+    public string Email { get; set; } = "";
+
+    [Required, StringLength(128)]
+    public string Password { get; set; } = "";
+}
+
+public record MeDto(string Email);
