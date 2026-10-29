@@ -3,6 +3,7 @@ using Invoiceflow.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Invoiceflow.Api.Controllers;
 
@@ -10,6 +11,7 @@ namespace Invoiceflow.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : ControllerBase
 {
+    [EnableRateLimiting("auth")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterInput input)
     {
@@ -28,14 +30,16 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
         return ValidationProblem(ModelState);
     }
 
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginInput input)
     {
-        // lockoutOnFailure becomes true tomorrow (Day 11)
-        var result = await signIn.PasswordSignInAsync(input.Email.Trim(), input.Password, isPersistent: false, lockoutOnFailure: false);
-        return result.Succeeded
-            ? NoContent()
-            : Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid email or password.");
+        var result = await signIn.PasswordSignInAsync(input.Email.Trim(), input.Password, isPersistent: false, lockoutOnFailure: true);
+        if (result.Succeeded) return NoContent();
+
+        // Same message for wrong password, unknown email and locked account,
+        // so nobody can learn which accounts exist or are locked
+        return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid email or password.");
     }
 
     [Authorize]

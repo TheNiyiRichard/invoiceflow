@@ -69,6 +69,7 @@ npm run dev
 | 08 | Oct 26 | ASP.NET Core Identity user store and migration |
 | 09 | Oct 27 | Register endpoint with strong password rules and unique emails |
 | 10 | Oct 28 | Cookie login and logout (HttpOnly, Secure, SameSite=Strict) |
+| 11 | Oct 29 | Account lockout and rate-limited sign-in |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
