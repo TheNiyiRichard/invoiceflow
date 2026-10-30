@@ -20,6 +20,9 @@
   --color-danger-tint: #F6E3DC;
   --color-warning: #85560F;
   --color-warning-tint: #F5EBD8;
+  --color-on-dark: #F2F0EA;
+  --color-on-dark-2: #D9D7D0;
+  --color-on-dark-muted: #8C918B;
 
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
