@@ -12,10 +12,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         base.OnModelCreating(modelBuilder); // builds the Identity tables, must come first
 
-        modelBuilder.Entity<ApplicationUser>()
-            .HasIndex(u => u.NormalizedEmail)
-            .IsUnique()
-            .HasDatabaseName("EmailIndex");
+        modelBuilder.Entity<ApplicationUser>(u =>
+        {
+            u.HasIndex(x => x.NormalizedEmail).IsUnique().HasDatabaseName("EmailIndex");
+            u.Property(x => x.FullName).HasMaxLength(100).IsRequired();
+            u.Property(x => x.BusinessName).HasMaxLength(200);
+        });
 
         modelBuilder.Entity<Client>(c =>
         {

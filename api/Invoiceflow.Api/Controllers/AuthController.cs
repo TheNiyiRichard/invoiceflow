@@ -16,7 +16,13 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<IActionResult> Register(RegisterInput input)
     {
         var email = input.Email.Trim();
-        var user = new ApplicationUser { UserName = email, Email = email };
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = input.FullName.Trim(),
+            BusinessName = string.IsNullOrWhiteSpace(input.BusinessName) ? null : input.BusinessName.Trim(),
+        };
         var result = await users.CreateAsync(user, input.Password);
         if (result.Succeeded) return StatusCode(StatusCodes.Status201Created);
 
@@ -55,6 +61,6 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<ActionResult<MeDto>> Me()
     {
         var user = await users.GetUserAsync(User);
-        return user is null ? Unauthorized() : new MeDto(user.Email!);
+        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName);
     }
 }
