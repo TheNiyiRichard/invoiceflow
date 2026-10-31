@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { ArrowRight, ShieldWarning } from '@phosphor-icons/react'
 import AuthLayout from '../components/AuthLayout.jsx'
 import PasswordField from '../components/PasswordField.jsx'
+import { useAuth } from '../auth/AuthContext.js'
 import { postJson } from '../api.js'
 
 const messages = {
@@ -12,7 +13,7 @@ const messages = {
 }
 
 export default function SignIn() {
-  const navigate = useNavigate()
+  const { refresh } = useAuth()
   const { state } = useLocation()
   const [email, setEmail] = useState(state?.email ?? '')
   const [password, setPassword] = useState('')
@@ -26,7 +27,7 @@ export default function SignIn() {
     try {
       const res = await postJson('/api/auth/login', { email, password })
       if (res.ok) {
-        navigate('/', { replace: true })
+        await refresh() // GuestRoute then sends you to the page you came from
         return
       }
       setPassword('')

@@ -71,6 +71,7 @@ npm run dev
 | 10 | Oct 28 | Cookie login and logout (HttpOnly, Secure, SameSite=Strict) |
 | 11 | Oct 29 | Account lockout and rate-limited sign-in |
 | 12 | Oct 30 | Sign-in and register screens in React |
+| 13 | Oct 31 | Per-user data and protected routes |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

@@ -1,33 +1,20 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { Receipt, SignOut } from '@phosphor-icons/react'
-import { postJson } from '../api.js'
+import { useAuth } from '../auth/AuthContext.js'
+import { getJson } from '../api.js'
 import '../styles/auth.css'
 
 export default function Home() {
-  const navigate = useNavigate()
-  const [user, setUser] = useState(null)
+  const { user, signOut } = useAuth()
+  const [clients, setClients] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch('/api/auth/me', { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then(setUser)
-      .catch((err) => {
-        if (err.name !== 'AbortError') navigate('/sign-in', { replace: true })
-      })
+    getJson('/api/clients', controller.signal)
+      .then((res) => { if (res.ok) setClients(res.data) })
+      .catch(() => {})
     return () => controller.abort()
-  }, [navigate])
-
-  async function signOut() {
-    await postJson('/api/auth/logout')
-    navigate('/sign-in', { replace: true })
-  }
-
-  if (!user) return null
+  }, [])
 
   return (
     <main className="shell">
@@ -39,6 +26,15 @@ export default function Home() {
         <p className="eyebrow">Signed in as {user.email}</p>
         <h1 className="auth-title">Welcome, {user.fullName || user.email}</h1>
         <button className="btn-secondary" type="button" onClick={signOut}><SignOut size={16} />Sign out</button>
+      </section>
+      <section>
+        <p className="auth-eyebrow">Your clients</p>
+        {clients?.length === 0 && <p className="field-hint">No clients yet.</p>}
+        {clients?.length > 0 && (
+          <ul className="client-list">
+            {clients.map((c) => <li key={c.id}>{c.name}<span>{c.email}</span></li>)}
+          </ul>
+        )}
       </section>
     </main>
   )
