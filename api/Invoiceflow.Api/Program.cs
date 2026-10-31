@@ -16,6 +16,8 @@ builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' missing. Set it with dotnet user-secrets.");
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)

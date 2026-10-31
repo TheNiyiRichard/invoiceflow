@@ -1,12 +1,16 @@
+using Invoiceflow.Api.Auth;
 using Invoiceflow.Api.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Invoiceflow.Api.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser currentUser) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Client> Clients => Set<Client>();
+
+    // Read fresh on every query, so each request only sees its own user's rows
+    string? CurrentUserId => currentUser.Id;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,12 +30,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             c.Property(x => x.Company).HasMaxLength(200);
             c.Property(x => x.Address).HasMaxLength(500);
 
-            var seeded = new DateTime(2026, 10, 23, 0, 0, 0, DateTimeKind.Utc);
-            c.HasData(
-                new Client { Id = Guid.Parse("3f1c2a9e-6b4d-4e8a-9c71-2d5e8f0a1b01"), Name = "Amara Okafor", Email = "amara@example.com", Company = "Okafor Studio", Address = "12 Allen Avenue, Ikeja, Lagos", CreatedAt = seeded },
-                new Client { Id = Guid.Parse("8a7e5d21-0c3b-4f69-b2a4-71e9c6d3f802"), Name = "Daniel Mensah", Email = "daniel@example.com", Company = "Mensah Logistics", Address = "4 Oxford Street, Accra", CreatedAt = seeded },
-                new Client { Id = Guid.Parse("c94b0f37-2e18-4d5a-8f60-e3a1b7d49c03"), Name = "Sarah Whitfield", Email = "sarah@example.com", Company = null, Address = "27 Market Lane, Leeds", CreatedAt = seeded }
-            );
+            c.HasOne<ApplicationUser>().WithMany()
+                .HasForeignKey(x => x.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Safety net: even a query that forgets to filter only sees the signed-in user's clients
+            c.HasQueryFilter(x => x.OwnerId == CurrentUserId);
         });
     }
 }

@@ -128,37 +128,15 @@ namespace Invoiceflow.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Clients");
+                    b.HasIndex("OwnerId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("3f1c2a9e-6b4d-4e8a-9c71-2d5e8f0a1b01"),
-                            Address = "12 Allen Avenue, Ikeja, Lagos",
-                            Company = "Okafor Studio",
-                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "amara@example.com",
-                            Name = "Amara Okafor"
-                        },
-                        new
-                        {
-                            Id = new Guid("8a7e5d21-0c3b-4f69-b2a4-71e9c6d3f802"),
-                            Address = "4 Oxford Street, Accra",
-                            Company = "Mensah Logistics",
-                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "daniel@example.com",
-                            Name = "Daniel Mensah"
-                        },
-                        new
-                        {
-                            Id = new Guid("c94b0f37-2e18-4d5a-8f60-e3a1b7d49c03"),
-                            Address = "27 Market Lane, Leeds",
-                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "sarah@example.com",
-                            Name = "Sarah Whitfield"
-                        });
+                    b.ToTable("Clients");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -292,6 +270,15 @@ namespace Invoiceflow.Api.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Invoiceflow.Api.Models.Client", b =>
+                {
+                    b.HasOne("Invoiceflow.Api.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
