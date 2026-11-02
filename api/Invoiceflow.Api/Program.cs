@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Invoiceflow.Api.Auth;
 using Invoiceflow.Api.Data;
 using Invoiceflow.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +23,10 @@ builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
-builder.Services.AddAuthorization();
+
+// Secure by default: every endpoint needs a signed-in user unless it's marked [AllowAnonymous]
+builder.Services.AddAuthorization(o =>
+    o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 builder.Services.AddIdentityCore<ApplicationUser>(o =>
 {
@@ -76,7 +80,7 @@ var app = builder.Build();
 // API docs only on my own machine, never in production
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); // /openapi/v1.json
+    app.MapOpenApi().AllowAnonymous(); // /openapi/v1.json
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v1.json", "Invoiceflow API v1");
@@ -89,5 +93,5 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/api/health/db");
+app.MapHealthChecks("/api/health/db").AllowAnonymous();
 app.Run();

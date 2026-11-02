@@ -11,6 +11,7 @@ namespace Invoiceflow.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : ControllerBase
 {
+    [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterInput input)
@@ -36,6 +37,7 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
         return ValidationProblem(ModelState);
     }
 
+    [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginInput input)

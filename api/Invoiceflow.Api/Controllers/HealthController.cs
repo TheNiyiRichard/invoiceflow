@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Invoiceflow.Api.Controllers;
 
+[AllowAnonymous] // uptime checks run signed out
 [ApiController]
 [Route("api/health")]
 public class HealthController : ControllerBase

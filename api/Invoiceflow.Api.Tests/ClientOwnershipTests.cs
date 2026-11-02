@@ -5,7 +5,8 @@ using Invoiceflow.Api.Dtos;
 namespace Invoiceflow.Api.Tests;
 
 // Proves one user can't read, change or delete another user's clients (IDOR)
-public class ClientOwnershipTests(ApiFactory factory) : IClassFixture<ApiFactory>
+[Collection("api")]
+public class ClientOwnershipTests(ApiFactory factory)
 {
     const string Password = "copper lantern harbour drift";
 
