@@ -15,7 +15,8 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 
 ## Security features (planned)
 
-- [ ] Secure cookie sessions with account lockout
+- [x] Secure cookie sessions with account lockout
+- [x] Per-user data isolation (IDOR protection), covered by automated tests
 - [ ] Two-factor sign-in (TOTP) with recovery codes
 - [ ] Signed, expiring payment links (HMAC-SHA256)
 - [ ] Verified Stripe webhooks
@@ -27,6 +28,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 ## Project structure
 
 - `api/`: ASP.NET Core Web API
+- `api/Invoiceflow.Api.Tests/`: integration tests
 - `web/`: React front end
 
 ## Run it locally
@@ -48,6 +50,12 @@ cd web
 npm ci
 npm run dev
 ```
+
+**Tests** (from the repo root, API stopped)
+```powershell
+dotnet test
+```
+Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every run.
 
 | URL | What it is |
 | --- | --- |
@@ -72,6 +80,8 @@ npm run dev
 | 11 | Oct 29 | Account lockout and rate-limited sign-in |
 | 12 | Oct 30 | Sign-in and register screens in React |
 | 13 | Oct 31 | Per-user data and protected routes |
+| 14 | Nov 1 | Week 2 review: automated tests proving users can't reach each other's clients |
+
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

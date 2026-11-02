@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/api/">
+    <Project Path="api/Invoiceflow.Api.Tests/Invoiceflow.Api.Tests.csproj" />
+    <Project Path="api/Invoiceflow.Api/Invoiceflow.Api.csproj" />
+  </Folder>
+</Solution>
