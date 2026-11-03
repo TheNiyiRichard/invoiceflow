@@ -8,30 +8,6 @@ namespace Invoiceflow.Api.Tests;
 [Collection("api")]
 public class ClientOwnershipTests(ApiFactory factory)
 {
-    const string Password = "copper lantern harbour drift";
-
-    // Registers a brand-new user and returns a browser signed in as them.
-    // Uses 2 of the 10 auth requests a minute the rate limiter allows. Keep the total under 10.
-    async Task<HttpClient> SignedInUser(string tag)
-    {
-        var browser = factory.NewBrowser();
-        var email = $"{tag}-{Guid.NewGuid():N}@example.com";
-
-        var register = await browser.PostAsJsonAsync("/api/auth/register", new { fullName = $"Tester {tag}", email, password = Password });
-        Assert.Equal(HttpStatusCode.Created, register.StatusCode);
-
-        var login = await browser.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
-        Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
-        return browser;
-    }
-
-    static async Task<ClientDto> AddClient(HttpClient browser, string name)
-    {
-        var res = await browser.PostAsJsonAsync("/api/clients", new { name, email = "client@example.com" });
-        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
-        return (await res.Content.ReadFromJsonAsync<ClientDto>())!;
-    }
-
     [Fact]
     public async Task Signed_out_requests_get_401()
     {
@@ -42,9 +18,9 @@ public class ClientOwnershipTests(ApiFactory factory)
     [Fact]
     public async Task Users_cannot_see_each_others_clients()
     {
-        var a = await SignedInUser("a");
-        var b = await SignedInUser("b");
-        var client = await AddClient(a, "Client of A");
+        var a = await factory.SignedInUser("a");
+        var b = await factory.SignedInUser("b");
+        var client = await a.AddClient("Client of A");
 
         // Control: the owner can see it, so the 404s below aren't just a broken endpoint
         var aList = await a.GetFromJsonAsync<List<ClientDto>>("/api/clients");
@@ -61,9 +37,9 @@ public class ClientOwnershipTests(ApiFactory factory)
     [Fact]
     public async Task Users_cannot_edit_or_delete_each_others_clients()
     {
-        var a = await SignedInUser("a");
-        var b = await SignedInUser("b");
-        var original = await AddClient(a, "Client of A");
+        var a = await factory.SignedInUser("a");
+        var b = await factory.SignedInUser("b");
+        var original = await a.AddClient("Client of A");
 
         var put = await b.PutAsJsonAsync($"/api/clients/{original.Id}", new { name = "Hacked by B", email = "hacked@example.com" });
         Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);

@@ -58,6 +58,11 @@ public class ClientsController(AppDbContext db, CurrentUser currentUser) : Contr
     {
         var client = await MyClients.FirstOrDefaultAsync(c => c.Id == id);
         if (client is null) return NotFound();
+
+        // Invoices are financial records, so their client can't disappear
+        if (await db.Invoices.AnyAsync(i => i.ClientId == id))
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "This client has invoices, so it can't be deleted.");
+
         db.Clients.Remove(client);
         await db.SaveChangesAsync();
         return NoContent();

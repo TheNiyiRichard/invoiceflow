@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Json;
 using Invoiceflow.Api.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -14,6 +16,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     static readonly string ConnectionString =
         Environment.GetEnvironmentVariable("INVOICEFLOW_TEST_DB")
         ?? "Server=localhost;Database=InvoiceflowTest;Trusted_Connection=True;TrustServerCertificate=True";
+
+    const string Password = "copper lantern harbour drift";
+    readonly Dictionary<string, HttpClient> users = [];
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -44,4 +49,23 @@ public class ApiFactory : WebApplicationFactory<Program>
         BaseAddress = new Uri("https://localhost"), // the auth cookie is Secure-only
         AllowAutoRedirect = false
     });
+
+    // One signed-in browser per tag ("a", "b"), shared by every test. New users in every
+    // test would run into the 10-a-minute sign-in limit, which all tests share.
+    public async Task<HttpClient> SignedInUser(string tag)
+    {
+        if (users.TryGetValue(tag, out var existing)) return existing;
+
+        var browser = NewBrowser();
+        var email = $"{tag}-{Guid.NewGuid():N}@example.com";
+
+        var register = await browser.PostAsJsonAsync("/api/auth/register", new { fullName = $"Tester {tag}", email, password = Password });
+        Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+
+        var login = await browser.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
+        Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
+
+        users[tag] = browser;
+        return browser;
+    }
 }
