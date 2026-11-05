@@ -2,19 +2,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Invoiceflow.Api.Dtos;
 
-public record LineItemDto(Guid Id, int Position, string Description, decimal Quantity, decimal UnitPrice);
+public record LineItemDto(Guid Id, int Position, string Description, decimal Quantity, decimal UnitPrice, decimal Amount);
 
 public record InvoiceDto(
-    Guid Id, Guid ClientId, string ClientName, string Status,
+    Guid Id, string Number, Guid ClientId, string ClientName, string Status,
     DateOnly IssueDate, DateOnly DueDate, string? Notes,
-    decimal Subtotal, decimal Tax, decimal Total,
+    decimal Subtotal, decimal TaxRate, decimal Tax, decimal Total,
     List<LineItemDto> LineItems, DateTime CreatedAt, DateTime UpdatedAt);
 
-public record InvoiceSummaryDto(Guid Id, Guid ClientId, string ClientName, string Status, DateOnly IssueDate, DateOnly DueDate, decimal Total);
+public record InvoiceSummaryDto(Guid Id, string Number, Guid ClientId, string ClientName, string Status, DateOnly IssueDate, DateOnly DueDate, decimal Total);
 
 public record PagedResult<T>(List<T> Items, int Page, int PageSize, int TotalCount);
 
-// What the API accepts. No OwnerId, Status or totals: the server decides those.
+// What the API accepts. No OwnerId, Number, Status, rate or totals: the server decides those.
 public class InvoiceInput
 {
     [Required]

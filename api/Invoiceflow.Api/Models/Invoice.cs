@@ -4,6 +4,9 @@ public class Invoice
 {
     public Guid Id { get; set; }
 
+    // Per-user sequence, shown as INV-0001. Set by the server; the database refuses duplicates.
+    public int Number { get; set; }
+
     // Set by the server from the sign-in cookie, never from the request body
     public string OwnerId { get; set; } = "";
 
@@ -15,7 +18,9 @@ public class Invoice
     public DateOnly DueDate { get; set; }
     public string? Notes { get; set; }
 
-    // Money is decimal, never float or double. Calculated on the server (Day 17).
+    // Money is decimal, never float or double. All calculated on the server by InvoiceMath.
+    // The rate is saved on each invoice, so a future rate change never alters old invoices.
+    public decimal TaxRate { get; set; }
     public decimal Subtotal { get; set; }
     public decimal Tax { get; set; }
     public decimal Total { get; set; }

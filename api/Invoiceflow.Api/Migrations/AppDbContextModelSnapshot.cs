@@ -161,6 +161,9 @@ namespace Invoiceflow.Api.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
                     b.Property<string>("OwnerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -178,6 +181,10 @@ namespace Invoiceflow.Api.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -188,6 +195,9 @@ namespace Invoiceflow.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("OwnerId", "Number")
+                        .IsUnique();
 
                     b.HasIndex("OwnerId", "Status");
 

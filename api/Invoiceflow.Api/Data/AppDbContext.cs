@@ -48,6 +48,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser cu
             i.Property(x => x.Subtotal).HasPrecision(18, 2);
             i.Property(x => x.Tax).HasPrecision(18, 2);
             i.Property(x => x.Total).HasPrecision(18, 2);
+            i.Property(x => x.TaxRate).HasPrecision(5, 4); // 0.0500 = 5%
 
             i.HasOne<ApplicationUser>().WithMany()
                 .HasForeignKey(x => x.OwnerId)
@@ -58,8 +59,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser cu
                 .HasForeignKey(x => x.ClientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            i.HasIndex(x => new { x.OwnerId, x.Status }); // the invoices list filters by status
-
+            i.HasIndex(x => new { x.OwnerId, x.Status }); // the invoices list filters by status 
+            // INV-0001, INV-0002, etc. is a per-user sequence, so the database refuses duplicates
+            i.HasIndex(x => new { x.OwnerId, x.Number }).IsUnique(); 
+            
             // Same safety net as clients, from day one
             i.HasQueryFilter(x => x.OwnerId == CurrentUserId);
         });

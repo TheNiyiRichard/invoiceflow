@@ -3,6 +3,7 @@ using Invoiceflow.Api.Data;
 using Invoiceflow.Api.Dtos;
 using Invoiceflow.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Invoiceflow.Api.Controllers;
@@ -14,6 +15,7 @@ namespace Invoiceflow.Api.Controllers;
 public class InvoicesController(AppDbContext db, CurrentUser currentUser) : ControllerBase
 {
     const int MaxPageSize = 50;
+    const int MaxNumberAttempts = 5;
 
     string UserId => currentUser.Id!;
 
@@ -34,7 +36,7 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         var items = await query
             .OrderByDescending(i => i.IssueDate).ThenByDescending(i => i.CreatedAt)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(i => new InvoiceSummaryDto(i.Id, i.ClientId, i.Client.Name, i.Status.ToString(), i.IssueDate, i.DueDate, i.Total))
+            .Select(i => new InvoiceSummaryDto(i.Id, InvoiceMath.FormatNumber(i.Number), i.ClientId, i.Client.Name, i.Status.ToString(), i.IssueDate, i.DueDate, i.Total))
             .ToListAsync();
 
         return new PagedResult<InvoiceSummaryDto>(items, page, pageSize, total);
@@ -55,10 +57,11 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         var client = await CheckInput(input);
         if (client is null) return ValidationProblem(ModelState);
 
-        var invoice = new Invoice { OwnerId = UserId, Client = client }; // starts as Draft
+        // Starts as Draft, with today's GST rate saved on it
+        var invoice = new Invoice { OwnerId = UserId, Client = client, TaxRate = InvoiceMath.GstRate };
         Apply(invoice, input);
         db.Invoices.Add(invoice);
-        await db.SaveChangesAsync();
+        await SaveWithNextNumber(invoice);
         return CreatedAtAction(nameof(GetOne), new { id = invoice.Id }, ToDto(invoice));
     }
 
@@ -76,7 +79,7 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         if (client is null) return ValidationProblem(ModelState);
 
         invoice.Client = client;
-        Apply(invoice, input);
+        Apply(invoice, input); // the number and tax rate stay as they were
         invoice.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return ToDto(invoice);
@@ -88,6 +91,11 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         if (input.DueDate < input.IssueDate)
             ModelState.AddModelError(nameof(input.DueDate), "Due date can't be before the issue date.");
 
+        // A huge amount gets a clear 400, instead of overflowing the database column (a 500)
+        var subtotal = input.LineItems.Sum(li => InvoiceMath.LineAmount(li.Quantity, li.UnitPrice));
+        if (subtotal > InvoiceMath.MaxSubtotal)
+            ModelState.AddModelError(nameof(input.LineItems), "This invoice is too large. Split it into smaller invoices.");
+
         // The client must be YOURS. Otherwise anyone could put another user's client on an invoice.
         // Same message whether it doesn't exist or isn't yours, so nothing leaks.
         var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == input.ClientId && c.OwnerId == UserId);
@@ -95,6 +103,25 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
             ModelState.AddModelError(nameof(input.ClientId), "Choose one of your clients.");
 
         return ModelState.IsValid ? client : null;
+    }
+
+    // Next number for this user. If two requests pick the same number at the same moment,
+    // the unique index rejects one of them, and that one simply takes the next number.
+    async Task SaveWithNextNumber(Invoice invoice)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            invoice.Number = (await MyInvoices.MaxAsync(i => (int?)i.Number) ?? 0) + 1;
+            try
+            {
+                await db.SaveChangesAsync();
+                return;
+            }
+            catch (DbUpdateException ex) when (attempt < MaxNumberAttempts && ex.InnerException is SqlException { Number: 2601 or 2627 })
+            {
+                // 2601/2627 = duplicate key: someone else just took this number, so go round again
+            }
+        }
     }
 
     static void Apply(Invoice invoice, InvoiceInput input)
@@ -112,13 +139,16 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
             Quantity = li.Quantity,
             UnitPrice = li.UnitPrice,
         }));
-        // Subtotal, Tax and Total are calculated here on Day 17, never taken from the request
+
+        // Totals always come from the lines, never from the request
+        InvoiceMath.Recalculate(invoice);
     }
 
     static InvoiceDto ToDto(Invoice i) => new(
-        i.Id, i.ClientId, i.Client.Name, i.Status.ToString(), i.IssueDate, i.DueDate, i.Notes,
-        i.Subtotal, i.Tax, i.Total,
+        i.Id, InvoiceMath.FormatNumber(i.Number), i.ClientId, i.Client.Name, i.Status.ToString(), i.IssueDate, i.DueDate, i.Notes,
+        i.Subtotal, i.TaxRate, i.Tax, i.Total,
         i.LineItems.OrderBy(li => li.Position)
-            .Select(li => new LineItemDto(li.Id, li.Position, li.Description, li.Quantity, li.UnitPrice)).ToList(),
+            .Select(li => new LineItemDto(li.Id, li.Position, li.Description, li.Quantity, li.UnitPrice,
+                InvoiceMath.LineAmount(li.Quantity, li.UnitPrice))).ToList(),
         i.CreatedAt, i.UpdatedAt);
 }

@@ -83,6 +83,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 14 | Nov 1 | Week 2 review: automated tests proving users can't reach each other's clients |
 | 15 | Nov 2 | Sign-in required by default; invoice and line item tables |
 | 16 | Nov 3 | Invoice endpoints with status filter, paging and ownership checks |
+| 17 | Nov 4 | Server-side totals with decimal maths and INV-0001 numbering |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
