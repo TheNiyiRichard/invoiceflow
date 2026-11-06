@@ -23,6 +23,13 @@
   --color-on-dark: #F2F0EA;
   --color-on-dark-2: #D9D7D0;
   --color-on-dark-muted: #8C918B;
+  
+    /* Sidebar surfaces (screen 1b) */
+  --color-sidebar-raised: #171D1A;
+  --color-sidebar-hover: #1A201D;
+  --color-sidebar-active: #222A26;
+  --color-sidebar-border: #262C29;
+  --color-on-dark-idle: #A9ADA6;
 
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;

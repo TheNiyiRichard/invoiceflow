@@ -84,6 +84,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 15 | Nov 2 | Sign-in required by default; invoice and line item tables |
 | 16 | Nov 3 | Invoice endpoints with status filter, paging and ownership checks |
 | 17 | Nov 4 | Server-side totals with decimal maths and INV-0001 numbering |
+| 18 | Nov 5 | App shell: dark sidebar, top bar and routing |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
