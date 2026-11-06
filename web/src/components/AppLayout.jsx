@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { CreditCard, List, LockSimple, Receipt, ShieldCheck, SignOut, SquaresFour, UsersThree, X } from '@phosphor-icons/react'
 import { useAuth } from '../auth/AuthContext.js'
+import { initials } from '../format.js'
 import '../styles/app.css'
 
 // The whole menu in one place. Adding a page = one line here + one route in App.jsx.
@@ -17,11 +18,6 @@ const sections = [
   ] },
 ]
 const links = sections.flatMap((s) => s.links)
-
-function initials(name) {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-  return ((words[0]?.[0] ?? '') + (words.length > 1 ? words.at(-1)[0] : '')).toUpperCase()
-}
 
 export default function AppLayout() {
   const { user, signOut } = useAuth()

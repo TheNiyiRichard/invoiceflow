@@ -23,13 +23,26 @@
   --color-on-dark: #F2F0EA;
   --color-on-dark-2: #D9D7D0;
   --color-on-dark-muted: #8C918B;
-  
+
     /* Sidebar surfaces (screen 1b) */
   --color-sidebar-raised: #171D1A;
   --color-sidebar-hover: #1A201D;
   --color-sidebar-active: #222A26;
   --color-sidebar-border: #262C29;
   --color-on-dark-idle: #A9ADA6;
+
+  /* Invoices list (screen 1c) */
+  --color-segment: #ECE9E2;
+  --color-segment-hover: #E0DCD3;
+  --color-row-border: #EEEBE4;
+  --color-row-hover: #F3F1EB;
+  --color-neutral-tint: #ECEAE4;
+  --color-draft: #5E625C;
+  --color-draft-border: #C9C5BA;
+  --color-dot-draft: #A9A69C;
+  --color-dot-viewed: #B7832A;
+  --color-dot-overdue: #C4553A;
+  --color-dot-paid: #2F7A5A;
 
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
