@@ -10,14 +10,17 @@ async function request(url, options = {}) {
 
 export const getJson = (url, signal) => request(url, { signal })
 
-export const postJson = (url, body) =>
+const sendJson = (method) => (url, body) =>
   request(url, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-// Turns ASP.NET validation errors into { email: '…', password: '…' }
+export const postJson = sendJson('POST')
+export const putJson = sendJson('PUT')
+
+// Turns ASP.NET validation errors into { email: '…', 'lineitems[0].quantity': '…' }
 export function fieldErrors(data) {
   const out = {}
   for (const [key, messages] of Object.entries(data?.errors ?? {})) {

@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout.jsx'
 import Overview from './pages/Overview.jsx'
 import Clients from './pages/Clients.jsx'
 import Invoices from './pages/Invoices.jsx'
+import InvoiceEditor from './pages/InvoiceEditor.jsx'
 import ComingSoon from './pages/ComingSoon.jsx'
 import SignIn from './pages/SignIn.jsx'
 import Register from './pages/Register.jsx'
@@ -19,6 +20,8 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Overview />} />
               <Route path="/invoices" element={<Invoices />} />
+              <Route path="/invoices/new" element={<InvoiceEditor />} />
+              <Route path="/invoices/:id" element={<InvoiceEditor />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/payments" element={<ComingSoon title="Payments" when="Week 5">Card payments through Stripe, in test mode.</ComingSoon>} />
               <Route path="/security" element={<ComingSoon title="Security" when="Week 6">Two-factor sign-in, recovery codes and your signed-in devices.</ComingSoon>} />

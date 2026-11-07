@@ -41,3 +41,9 @@
 .page-btn[aria-current='page'] { background: var(--color-ink); color: var(--color-paper); }
 .page-btn.is-off { color: var(--color-on-dark-muted); pointer-events: none; }
 .page-gap { min-width: 30px; height: 30px; display: grid; place-items: center; color: var(--color-on-dark-muted); }
+
+.page-action { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius-sm); background: var(--color-green); color: var(--color-paper); font-size: 14px; font-weight: 500; box-shadow: var(--shadow-button); transition: background .2s; }
+.page-action:hover { background: var(--color-green-hover); color: var(--color-paper); text-decoration: none; }
+.page-action:active { background: var(--color-green-pressed); }
+.inv-link { color: var(--color-ink); font-weight: 500; }
+.inv-link:hover { color: var(--color-green); }

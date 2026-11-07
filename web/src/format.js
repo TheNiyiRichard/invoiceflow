@@ -31,3 +31,17 @@ export function initials(name) {
   const words = name.trim().split(/\s+/).filter(Boolean)
   return ((words[0]?.[0] ?? '') + (words.length > 1 ? words.at(-1)[0] : '')).toUpperCase()
 }
+
+// Dates as "2026-11-07": the same shape the API and <input type="date"> use
+export function today() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export const addDays = (s, n) => new Date(parseDate(s) + n * 86_400_000).toISOString().slice(0, 10)
+
+// Whole days from a to b, or null while either date is empty
+export function daysBetween(a, b) {
+  if (!a || !b) return null
+  return Math.round((parseDate(b) - parseDate(a)) / 86_400_000)
+}

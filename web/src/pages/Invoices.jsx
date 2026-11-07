@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { CaretLeft, CaretRight } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Plus } from '@phosphor-icons/react'
 import { getJson } from '../api.js'
 import { dueInfo, formatDate, formatMoney, initials } from '../format.js'
 import '../styles/invoices.css'
@@ -68,6 +68,7 @@ export default function Invoices() {
       <div className="page-head">
         <h1 className="page-title">Invoices</h1>
         {data && <span className="page-count">{total} {status ? status.toLowerCase() : 'total'}</span>}
+        <Link className="page-action" to="/invoices/new"><Plus size={16} />New invoice</Link>
       </div>
 
       <nav className="tabs" aria-label="Filter by status">
@@ -85,7 +86,7 @@ export default function Invoices() {
         <div className="empty">
           {total > 0
             ? <p>Nothing on this page. <Link to={href(status, 1)}>Go to the first page</Link></p>
-            : <p>{status ? `No ${status.toLowerCase()} invoices.` : 'No invoices yet. You’ll create them here from Day 20.'}</p>}
+            : <p>{status ? `No ${status.toLowerCase()} invoices.` : <>No invoices yet. <Link to="/invoices/new">Create your first one</Link></>}</p>}
         </div>
       )}
 
@@ -108,7 +109,7 @@ export default function Invoices() {
                   const due = dueInfo(inv.dueDate, inv.status)
                   return (
                     <tr key={inv.id}>
-                      <td className="mono inv-number">{inv.number}</td>
+                      <td className="mono inv-number"><Link className="inv-link" to={`/invoices/${inv.id}`}>{inv.number}</Link></td>
                       <td>
                         <span className="client-cell">
                           <span className="avatar-sm" aria-hidden="true">{initials(inv.clientName)}</span>

@@ -86,6 +86,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 17 | Nov 4 | Server-side totals with decimal maths and INV-0001 numbering |
 | 18 | Nov 5 | App shell: dark sidebar, top bar and routing |
 | 19 | Nov 6 | Invoices list with status tabs, pills and pagination |
+| 20 | Nov 7 | Invoice editor: client picker, dates and line items |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
