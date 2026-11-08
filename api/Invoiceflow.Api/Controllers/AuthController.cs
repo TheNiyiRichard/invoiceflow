@@ -63,6 +63,6 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<ActionResult<MeDto>> Me()
     {
         var user = await users.GetUserAsync(User);
-        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName);
+        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName, user.BusinessName);
     }
 }

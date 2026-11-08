@@ -27,4 +27,4 @@ public class LoginInput
     public string Password { get; set; } = "";
 }
 
-public record MeDto(string Email, string FullName);
+public record MeDto(string Email, string FullName, string? BusinessName);

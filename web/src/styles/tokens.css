@@ -44,6 +44,9 @@
   --color-dot-overdue: #C4553A;
   --color-dot-paid: #2F7A5A;
 
+    /* Invoice preview (screen 1d) */
+  --color-sheet: #FFFEFB;
+
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Geist', system-ui, sans-serif;

@@ -1,0 +1,35 @@
+/* Invoice preview: the page your client will see (screen 1d) */
+.sheet { padding: 24px 22px; border-radius: 4px; background: var(--color-sheet); box-shadow: var(--shadow-card); color: var(--color-ink); font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sheet-from { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.sheet-from-text { min-width: 0; }
+.sheet-mark { flex: none; width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; background: var(--color-ink); color: var(--color-on-dark); font: 600 10.5px var(--font-mono); }
+.sheet-strong { font-size: 13px; font-weight: 600; }
+.sheet-muted { color: var(--color-muted); }
+.sheet-title { flex: none; text-align: right; }
+.sheet-word { font-family: var(--font-display); font-size: 30px; line-height: 1; }
+.sheet-number { margin-top: 4px; font: 400 10.5px var(--font-mono); color: var(--color-muted); }
+
+.sheet-meta { margin: 24px 0 0; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; }
+.sheet-meta dt, .sheet-lines th { font: 500 9px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); }
+.sheet-meta dt { margin-bottom: 3px; }
+.sheet-meta dd { margin: 0; font-weight: 500; }
+.sheet-meta .sheet-muted { font-weight: 400; }
+/* Line breaks are kept by CSS, never by turning typed text into HTML */
+.sheet-pre, .sheet-notes { white-space: pre-wrap; }
+
+.sheet-lines { width: 100%; margin-top: 24px; border-collapse: collapse; table-layout: fixed; }
+.sheet-lines th { padding: 0 0 7px; border-bottom: 1px solid var(--color-ink); text-align: left; }
+.sheet-lines td { padding: 8px 0; border-bottom: 1px solid var(--color-row-border); vertical-align: top; }
+.sheet-lines th + th, .sheet-lines td + td { padding-left: 6px; }
+.sheet-lines .num { text-align: right; font-family: var(--font-mono); }
+.sheet-lines .col-qty { width: 36px; }
+.sheet-lines .col-money { width: 72px; }
+
+.sheet-totals { width: 190px; max-width: 100%; margin: 14px 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.sheet-totals div { display: flex; justify-content: space-between; gap: 12px; color: var(--color-ink-2); }
+.sheet-totals dd { margin: 0; font-family: var(--font-mono); }
+.sheet-totals .sheet-due { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--color-ink); align-items: baseline; color: var(--color-ink); }
+.sheet-due dt { font-weight: 600; }
+.sheet-due dd { font-family: var(--font-display); font-size: 24px; line-height: 1; }
+.sheet-notes { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--color-row-border); color: var(--color-ink-2); }

@@ -8,7 +8,7 @@ export const AMOUNT_PATTERN = String.raw`\d{1,10}(\.\d{1,2})?`
 const AMOUNT = new RegExp(`^${AMOUNT_PATTERN}$`)
 
 // "12.5" → 1250n (hundredths), or null if it isn't a valid amount
-function toHundredths(text) {
+export function toHundredths(text) {
   const s = text.trim()
   if (!AMOUNT.test(s)) return null
   const [whole, frac = ''] = s.split('.')

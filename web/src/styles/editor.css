@@ -48,3 +48,20 @@
   .line-row { padding-bottom: 10px; border-bottom: 1px solid var(--color-row-border); }
   .totals-wrap { width: 100%; margin-right: 0; }
 }
+
+/* Live preview beside the form, autosave status in the header */
+.editor-layout { display: grid; gap: 32px; align-items: start; }
+.preview-panel { min-width: 0; max-width: 640px; padding: 14px; border-radius: var(--radius-lg); background: var(--color-sunken); }
+.preview-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 500; color: var(--color-ink-2); }
+.preview-label::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-dot-paid); }
+@media (min-width: 1280px) {
+  .editor-layout { grid-template-columns: minmax(0, 1fr) 380px; }
+  .preview-panel { max-width: none; position: sticky; top: 88px; max-height: calc(100vh - 112px); overflow-y: auto; }
+}
+
+.save-status { display: flex; align-items: center; gap: 6px; height: 40px; font-size: 13px; color: var(--color-muted); }
+.save-status svg { flex: none; }
+.save-status--ok svg { color: var(--color-dot-paid); }
+.save-status--problem { color: var(--color-danger); }
+.link-btn { padding: 0; border: 0; background: none; color: var(--color-green); font-weight: 500; cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
