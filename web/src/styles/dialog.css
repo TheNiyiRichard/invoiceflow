@@ -1,0 +1,15 @@
+/* Dialogs: a native <dialog>, so the browser moves focus in, keeps it there and closes on Escape */
+html:has(.dialog[open]) { overflow: hidden; }
+.dialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 28px; border: 0; border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-ink); box-shadow: var(--shadow-card); }
+.dialog::backdrop { background: rgba(19, 24, 22, 0.45); }
+.dialog-title { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.dialog-text { margin-top: 10px; color: var(--color-ink-2); line-height: 1.5; text-wrap: pretty; }
+.dialog .notice { margin-top: 16px; }
+.dialog-fields { min-width: 0; margin: 22px 0 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 16px; }
+.dialog .input { height: 44px; font-size: 14px; }
+.dialog textarea.input { height: auto; min-height: 80px; padding: 10px 14px; line-height: 1.5; resize: vertical; }
+.dialog-actions { margin-top: 24px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.dialog-actions .btn-primary { margin-top: 0; height: 40px; padding: 0 16px; font-size: 14px; }
+.btn-danger { height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; border: 0; border-radius: var(--radius-sm); background: var(--color-danger); color: var(--color-paper); font-size: 14px; font-weight: 500; box-shadow: var(--shadow-button); cursor: pointer; transition: background .2s; }
+.btn-danger:hover { background: var(--color-danger-hover); }
+.dialog-actions button:disabled { opacity: .6; cursor: progress; }

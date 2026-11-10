@@ -1,8 +1,9 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CheckCircle, CloudArrowUp, FloppyDisk, Plus, WarningCircle, X } from '@phosphor-icons/react'
-import { fieldErrors, getJson, postJson, putJson } from '../api.js'
+import { ArrowLeft, CheckCircle, CloudArrowUp, FloppyDisk, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
+import { deleteJson, fieldErrors, getJson, postJson, putJson } from '../api.js'
 import { useAuth } from '../auth/AuthContext.js'
+import Dialog from '../components/Dialog.jsx'
 import InvoicePreview from '../components/InvoicePreview.jsx'
 import { addDays, daysBetween, today } from '../format.js'
 import { AMOUNT_PATTERN, formatCents, previewTotals, toHundredths } from '../money.js'
@@ -129,6 +130,9 @@ function InvoiceForm({ clients, initial, onGone }) {
   const [elapsed, setElapsed] = useState({ save: 0, ms: 0 }) // time since the latest one
   const [errors, setErrors] = useState({})
   const [notice, setNotice] = useState(state?.created ? { ok: true, text: 'Draft created. From now on, changes save automatically.' } : null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const locked = invoice !== null && invoice.status !== 'Draft'
   const canAutosave = !isNew && !locked
@@ -167,7 +171,7 @@ function InvoiceForm({ clients, initial, onGone }) {
         setErrors(fieldErrors(res.data))
         setProblem({ body: sent, kind: 'rejected' })
       } else if (res.status === 409) {
-        await reload()
+        await reload('This invoice has been sent, so your last change wasn’t saved.')
       } else if (res.status === 404) {
         onGone()
       } else {
@@ -181,7 +185,7 @@ function InvoiceForm({ clients, initial, onGone }) {
   }
 
   // 409: it stopped being a draft somewhere else. Load the server's copy, which locks the form.
-  async function reload() {
+  async function reload(text) {
     const res = await getJson(`/api/invoices/${invoice.id}`)
     if (!res.ok) {
       onGone()
@@ -191,7 +195,7 @@ function InvoiceForm({ clients, initial, onGone }) {
     setInvoice(res.data)
     setForm(fresh)
     setSavedBody(bodyKey(fresh))
-    setNotice({ ok: false, text: 'This invoice has been sent, so your last change wasn’t saved.' })
+    setNotice({ ok: false, text })
   }
 
   // New invoices are only created when you click Create draft: no junk drafts, no used-up numbers
@@ -215,6 +219,35 @@ function InvoiceForm({ clients, initial, onGone }) {
       setNotice({ ok: false, text: 'Can’t reach the server. Try again in a moment.' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  function askDelete() {
+    setDeleteError('')
+    setConfirmDelete(true)
+  }
+
+  // Drafts only. The server checks again, so a draft that was just sent somewhere else is kept.
+  async function deleteDraft() {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const res = await deleteJson(`/api/invoices/${invoice.id}`)
+      // 404: it's already gone, which is what you wanted
+      if (res.ok || res.status === 404) {
+        navigate('/invoices', { replace: true, state: { deleted: invoice.number } })
+        return
+      }
+      if (res.status === 409) {
+        setConfirmDelete(false)
+        await reload('This invoice has been sent, so it can’t be deleted.')
+      } else {
+        setDeleteError('Something went wrong. Try again.')
+      }
+    } catch {
+      setDeleteError('Can’t reach the server. Try again in a moment.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -290,20 +323,27 @@ function InvoiceForm({ clients, initial, onGone }) {
               <FloppyDisk size={16} />{saving ? 'Creating…' : 'Create draft'}
             </button>
           )}
-          {status === 'saving' && (
-            <div className="save-status"><CloudArrowUp size={16} /><span role="status">Saving…</span></div>
-          )}
-          {status === 'saved' && (
-            <div className="save-status save-status--ok">
-              <CheckCircle size={16} weight="fill" /><span role="status">Saved</span>
-              {savedAgo && <span aria-hidden="true">{savedAgo}</span>}
-            </div>
-          )}
-          {status === 'problem' && (
-            <div className="save-status save-status--problem">
-              <WarningCircle size={16} /><span role="status">{PROBLEMS[problem.kind]}</span>
-              {problem.kind === 'invalid' && <button type="button" className="link-btn" onClick={showMe}>Show me</button>}
-              {problem.kind === 'failed' && <button type="button" className="link-btn" onClick={save}>Try again</button>}
+          {canAutosave && (
+            <div className="editor-actions">
+              {status === 'saving' && (
+                <div className="save-status"><CloudArrowUp size={16} /><span role="status">Saving…</span></div>
+              )}
+              {status === 'saved' && (
+                <div className="save-status save-status--ok">
+                  <CheckCircle size={16} weight="fill" /><span role="status">Saved</span>
+                  {savedAgo && <span aria-hidden="true">{savedAgo}</span>}
+                </div>
+              )}
+              {status === 'problem' && (
+                <div className="save-status save-status--problem">
+                  <WarningCircle size={16} /><span role="status">{PROBLEMS[problem.kind]}</span>
+                  {problem.kind === 'invalid' && <button type="button" className="link-btn" onClick={showMe}>Show me</button>}
+                  {problem.kind === 'failed' && <button type="button" className="link-btn" onClick={save}>Try again</button>}
+                </div>
+              )}
+              <button type="button" className="btn-ghost-danger" onClick={askDelete} disabled={saving}>
+                <Trash size={16} />Delete draft
+              </button>
             </div>
           )}
         </div>
@@ -316,7 +356,9 @@ function InvoiceForm({ clients, initial, onGone }) {
           <section>
             <h2 className="section-label">Bill to</h2>
             {clients.length === 0 ? (
-              <div className="empty"><p>You don’t have any clients yet. Add one first, then come back.</p></div>
+              <div className="empty">
+                <p>You don’t have any clients yet. <Link to="/clients" state={{ add: true }}>Add your first client</Link>, then come back.</p>
+              </div>
             ) : (
               <div className="field">
                 <label htmlFor="clientId">Client</label>
@@ -424,6 +466,17 @@ function InvoiceForm({ clients, initial, onGone }) {
           notes={form.notes}
         />
       </aside>
+
+      <Dialog open={confirmDelete} title={`Delete ${invoice?.number}?`} onClose={() => setConfirmDelete(false)}>
+        <p className="dialog-text">This draft and its line items will be deleted. This can’t be undone.</p>
+        {deleteError && <p className="notice notice--error" role="alert">{deleteError}</p>}
+        <div className="dialog-actions">
+          <button type="button" className="btn-secondary" onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</button>
+          <button type="button" className="btn-danger" onClick={deleteDraft} disabled={deleting}>
+            <Trash size={16} />{deleting ? 'Deleting…' : 'Delete draft'}
+          </button>
+        </div>
+      </Dialog>
     </div>
   )
 }

@@ -47,6 +47,9 @@
     /* Invoice preview (screen 1d) */
   --color-sheet: #FFFEFB;
 
+   /* Dialogs and delete actions */
+  --color-danger-hover: #873320;
+
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Geist', system-ui, sans-serif;

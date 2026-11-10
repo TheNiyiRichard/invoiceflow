@@ -85,6 +85,22 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         return ToDto(invoice);
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var invoice = await MyInvoices.FirstOrDefaultAsync(i => i.Id == id);
+        if (invoice is null) return NotFound();
+
+        // Only drafts. A sent invoice is a record of what the client received:
+        // it gets voided later (Week 5), never deleted.
+        if (invoice.Status != InvoiceStatus.Draft)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Only draft invoices can be deleted.");
+
+        db.Invoices.Remove(invoice); // its line items go too (cascade)
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     // Checks attributes can't do. Returns the client, or null with errors in ModelState.
     async Task<Client?> CheckInput(InvoiceInput input)
     {

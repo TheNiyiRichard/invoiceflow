@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { CaretLeft, CaretRight, Plus } from '@phosphor-icons/react'
 import { getJson } from '../api.js'
 import { dueInfo, formatDate, formatMoney, initials } from '../format.js'
@@ -39,6 +39,7 @@ function pageList(page, pages) {
 
 export default function Invoices() {
   const [params] = useSearchParams()
+  const { state } = useLocation()
   const { status, page } = readQuery(params)
 
   const query = new URLSearchParams({ page, pageSize: PAGE_SIZE })
@@ -71,6 +72,7 @@ export default function Invoices() {
         <Link className="page-action" to="/invoices/new"><Plus size={16} />New invoice</Link>
       </div>
 
+      {state?.deleted && <p className="notice notice--ok page-notice" role="status">{state.deleted} deleted.</p>}
       <nav className="tabs" aria-label="Filter by status">
         {TABS.map((t) => {
           const value = t === 'All' ? null : t

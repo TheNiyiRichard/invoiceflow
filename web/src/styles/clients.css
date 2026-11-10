@@ -1,0 +1,6 @@
+/* Clients page */
+.list .list-meta { margin-left: auto; }
+.list-actions { flex: none; display: flex; gap: 2px; margin-right: -8px; }
+.list-actions .icon-btn { color: var(--color-muted); }
+.list-actions .icon-btn:hover { background: var(--color-sunken); color: var(--color-ink); }
+.list-actions .icon-btn.danger:hover { background: var(--color-danger-tint); color: var(--color-danger); }

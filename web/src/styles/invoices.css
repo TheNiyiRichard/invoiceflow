@@ -47,3 +47,7 @@
 .page-action:active { background: var(--color-green-pressed); }
 .inv-link { color: var(--color-ink); font-weight: 500; }
 .inv-link:hover { color: var(--color-green); }
+
+/* Shared by the invoices and clients pages */
+button.page-action { border: 0; cursor: pointer; }
+.page-notice { max-width: 720px; }

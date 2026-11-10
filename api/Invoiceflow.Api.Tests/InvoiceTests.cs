@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Invoiceflow.Api.Dtos;
+using Invoiceflow.Api.Models;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -70,6 +71,36 @@ public class InvoiceTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
 
         var still = await a.GetAsync($"/api/clients/{client.Id}");
+        Assert.Equal(HttpStatusCode.OK, still.StatusCode);
+    }
+
+    [Fact]
+    public async Task Owner_can_delete_a_draft()
+    {
+        var a = await factory.SignedInUser("a");
+        var client = await a.AddClient();
+        var draft = await a.AddInvoice(client.Id);
+
+        var res = await a.DeleteAsync($"/api/invoices/{draft.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+
+        var gone = await a.GetAsync($"/api/invoices/{draft.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
+    }
+
+    // A sent invoice is a record of what the client received, so it stays
+    [Fact]
+    public async Task Sent_invoice_cannot_be_deleted()
+    {
+        var a = await factory.SignedInUser("a");
+        var client = await a.AddClient();
+        var invoice = await a.AddInvoice(client.Id);
+        await factory.SetStatus(invoice.Id, InvoiceStatus.Sent);
+
+        var res = await a.DeleteAsync($"/api/invoices/{invoice.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+
+        var still = await a.GetAsync($"/api/invoices/{invoice.Id}");
         Assert.Equal(HttpStatusCode.OK, still.StatusCode);
     }
 

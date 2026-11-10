@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Invoiceflow.Api.Models;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -67,5 +68,14 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         users[tag] = browser;
         return browser;
+    }
+
+     // There's no "send" endpoint yet (Day 30), so tests move an invoice out of Draft directly in the test database
+    public async Task SetStatus(Guid invoiceId, InvoiceStatus status)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Invoices.IgnoreQueryFilters().Where(i => i.Id == invoiceId)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, status));
     }
 }

@@ -19,6 +19,7 @@ const sendJson = (method) => (url, body) =>
 
 export const postJson = sendJson('POST')
 export const putJson = sendJson('PUT')
+export const deleteJson = sendJson('DELETE')
 
 // Turns ASP.NET validation errors into { email: '…', 'lineitems[0].quantity': '…' }
 export function fieldErrors(data) {

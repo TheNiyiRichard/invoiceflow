@@ -65,3 +65,9 @@
 .save-status--problem { color: var(--color-danger); }
 .link-btn { padding: 0; border: 0; background: none; color: var(--color-green); font-weight: 500; cursor: pointer; }
 .link-btn:hover { text-decoration: underline; }
+
+/* Delete draft */
+.editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.btn-ghost-danger { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--color-danger); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.btn-ghost-danger:hover { background: var(--color-danger-tint); }
+.btn-ghost-danger:disabled { opacity: .5; cursor: default; }
