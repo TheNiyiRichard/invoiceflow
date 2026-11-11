@@ -89,6 +89,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 20 | Nov 7 | Invoice editor: client picker, dates and line items |
 | 21 | Nov 8 | Live invoice preview and draft autosave |
 | 22 | Nov 9 | Manage clients in the app; delete draft invoices |
+| 23 | Nov 10 | Background job that marks unpaid invoices overdue |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

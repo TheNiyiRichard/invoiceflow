@@ -109,14 +109,17 @@ public class InvoiceTests(ApiFactory factory)
     {
         var a = await factory.SignedInUser("a");
         var client = await a.AddClient();
-        await a.AddInvoice(client.Id);
+        var draft = await a.AddInvoice(client.Id);
 
         var drafts = await a.GetFromJsonAsync<PagedResult<InvoiceSummaryDto>>("/api/invoices?status=Draft&pageSize=1000");
         Assert.Equal(50, drafts!.PageSize);
         Assert.NotEmpty(drafts.Items);
         Assert.All(drafts.Items, i => Assert.Equal("Draft", i.Status));
 
+        // Other tests share this user and may add paid invoices, so only check what this test controls:
+        // everything listed is Paid, and our draft isn't among them
         var paid = await a.GetFromJsonAsync<PagedResult<InvoiceSummaryDto>>("/api/invoices?status=Paid");
-        Assert.Empty(paid!.Items);
+        Assert.All(paid!.Items, i => Assert.Equal("Paid", i.Status));
+        Assert.DoesNotContain(paid.Items, i => i.Id == draft.Id);
     }
 }

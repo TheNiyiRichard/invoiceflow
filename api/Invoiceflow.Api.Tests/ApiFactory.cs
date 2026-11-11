@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Invoiceflow.Api.Models;
+using Invoiceflow.Api.Jobs;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -77,5 +78,12 @@ public class ApiFactory : WebApplicationFactory<Program>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Invoices.IgnoreQueryFilters().Where(i => i.Id == invoiceId)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, status));
+    }
+
+     // Runs the overdue check once, as if it were this moment
+    public async Task<int> RunOverdueJob(DateTimeOffset now)
+    {
+        using var scope = Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<OverdueInvoices>().MarkAsync(now);
     }
 }

@@ -28,4 +28,7 @@ static class TestApi
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         return (await res.Content.ReadFromJsonAsync<InvoiceDto>())!;
     }
+    
+    public static async Task<string> StatusOf(this HttpClient browser, Guid invoiceId) =>
+        (await browser.GetFromJsonAsync<InvoiceDto>($"/api/invoices/{invoiceId}"))!.Status;
 }

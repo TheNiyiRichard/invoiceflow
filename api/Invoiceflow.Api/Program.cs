@@ -5,6 +5,7 @@ using Invoiceflow.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Invoiceflow.Api.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,10 @@ builder.Services.AddRateLimiter(o =>
 });
 
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
+builder.Services.AddScoped<OverdueInvoices>();
+// Tests run the check themselves with a fixed clock, so the hourly timer stays off there
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddHostedService<OverdueInvoicesJob>();
 
 var app = builder.Build();
 
