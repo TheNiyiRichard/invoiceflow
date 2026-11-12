@@ -24,7 +24,9 @@ public class Invoice
     public decimal Subtotal { get; set; }
     public decimal Tax { get; set; }
     public decimal Total { get; set; }
-
+    
+    // When it was paid (UTC). Set by the payment code in Week 5; null until then.
+    public DateTime? PaidAt { get; set; }
     public List<LineItem> LineItems { get; set; } = [];
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

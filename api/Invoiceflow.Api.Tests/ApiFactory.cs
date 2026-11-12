@@ -86,4 +86,16 @@ public class ApiFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<OverdueInvoices>().MarkAsync(now);
     }
+
+    // There's no payment yet (Week 5), so tests mark an invoice paid directly in the test database
+    public async Task MarkPaid(Guid invoiceId, DateOnly issued, DateTime paidAt)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Invoices.IgnoreQueryFilters().Where(i => i.Id == invoiceId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(i => i.Status, InvoiceStatus.Paid)
+                .SetProperty(i => i.IssueDate, issued)
+                .SetProperty(i => i.PaidAt, (DateTime?)paidAt));
+    }
 }
