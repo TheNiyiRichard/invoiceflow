@@ -27,6 +27,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         // "Testing", not "Development": no user-secrets (so no dev connection string) and no Swagger
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
+        // All test classes share one sign-in limiter. The real app keeps 10 a minute.
+        builder.UseSetting("RateLimits:AuthPerMinute", "100");
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

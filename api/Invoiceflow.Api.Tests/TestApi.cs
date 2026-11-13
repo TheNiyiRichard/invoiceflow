@@ -7,11 +7,11 @@ namespace Invoiceflow.Api.Tests;
 // Shortcuts the tests share
 static class TestApi
 {
-    public static object InvoiceBody(Guid clientId, string description = "Design work") => new
+    public static object InvoiceBody(Guid clientId, string description = "Design work", DateOnly? issued = null) => new
     {
         clientId,
-        issueDate = "2026-11-03",
-        dueDate = "2026-11-17",
+        issueDate = issued ?? new DateOnly(2026, 11, 3),
+        dueDate = (issued ?? new DateOnly(2026, 11, 3)).AddDays(14),
         lineItems = new[] { new { description, quantity = 2, unitPrice = 150 } },
     };
 
@@ -22,9 +22,9 @@ static class TestApi
         return (await res.Content.ReadFromJsonAsync<ClientDto>())!;
     }
 
-    public static async Task<InvoiceDto> AddInvoice(this HttpClient browser, Guid clientId)
+    public static async Task<InvoiceDto> AddInvoice(this HttpClient browser, Guid clientId, DateOnly? issued = null)
     {
-        var res = await browser.PostAsJsonAsync("/api/invoices", InvoiceBody(clientId));
+        var res = await browser.PostAsJsonAsync("/api/invoices", InvoiceBody(clientId, issued: issued));
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         return (await res.Content.ReadFromJsonAsync<InvoiceDto>())!;
     }

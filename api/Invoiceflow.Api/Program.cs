@@ -60,7 +60,8 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
 });
 
-// Max 10 login/register attempts per minute from one IP address
+// Max 10 login/register attempts per minute from one IP address (tests raise it, see ApiFactory)
+var authPerMinute = builder.Configuration.GetValue("RateLimits:AuthPerMinute", 10);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -68,7 +69,7 @@ builder.Services.AddRateLimiter(o =>
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = authPerMinute,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         }));
