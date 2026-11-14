@@ -50,6 +50,10 @@
    /* Dialogs and delete actions */
   --color-danger-hover: #873320;
 
+    /* Dashboard chart (screen 1b) */
+  --color-bar-paid: #A9C6B6;
+  --color-bar-hatch: rgba(30, 91, 67, 0.55);
+
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Geist', system-ui, sans-serif;
