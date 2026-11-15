@@ -71,3 +71,8 @@
 .btn-ghost-danger { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--color-danger); font-size: 13.5px; font-weight: 500; cursor: pointer; }
 .btn-ghost-danger:hover { background: var(--color-danger-tint); }
 .btn-ghost-danger:disabled { opacity: .5; cursor: default; }
+
+/* Download PDF */
+.btn-quiet { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--color-ink-2); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.btn-quiet:hover { background: var(--color-sunken); color: var(--color-ink); }
+.btn-quiet:disabled { opacity: .5; cursor: default; }

@@ -12,6 +12,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - **Web:** React + Vite
 - **Database:** SQL Server
 - **Payments:** Stripe (test mode)
+- **PDFs:** QuestPDF (Community licence)
 
 ## Security features (planned)
 
@@ -93,6 +94,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 24 | Nov 11 | Dashboard stats endpoint: outstanding, paid this month, drafts, days to pay |
 | 25 | Nov 12 | Cash-flow endpoint: 12 months of paid vs outstanding |
 | 26 | Nov 13 | Dashboard: KPI band, cash-flow chart and recent invoices |
+| 27 | Nov 14 | Invoice PDFs built on the server, tested against the API |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

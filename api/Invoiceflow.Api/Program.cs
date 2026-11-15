@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Invoiceflow.Api.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
+// QuestPDF: free Community licence (individuals and businesses under $1M a year)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Security: don't tell the world which web server we run
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);

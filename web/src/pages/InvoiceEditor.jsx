@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CheckCircle, CloudArrowUp, FloppyDisk, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
-import { deleteJson, fieldErrors, getJson, postJson, putJson } from '../api.js'
+import { ArrowLeft, CheckCircle, CloudArrowUp, FilePdf, FloppyDisk, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
+import { deleteJson, downloadFile, fieldErrors, getJson, postJson, putJson } from '../api.js'
 import { useAuth } from '../auth/AuthContext.js'
 import Dialog from '../components/Dialog.jsx'
 import InvoicePreview from '../components/InvoicePreview.jsx'
@@ -133,6 +133,7 @@ function InvoiceForm({ clients, initial, onGone }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [downloading, setDownloading] = useState(false)
 
   const locked = invoice !== null && invoice.status !== 'Draft'
   const canAutosave = !isNew && !locked
@@ -251,6 +252,21 @@ function InvoiceForm({ clients, initial, onGone }) {
     }
   }
 
+  // The PDF is built on the server from the saved invoice, so it always matches what was saved
+  async function downloadPdf() {
+    setDownloading(true)
+    setNotice(null)
+    try {
+      const res = await downloadFile(`/api/invoices/${invoice.id}/pdf`, `${invoice.number}.pdf`)
+      if (res.status === 404) onGone()
+      else if (!res.ok && res.status !== 401) setNotice({ ok: false, text: 'Couldn’t create the PDF. Try again.' })
+    } catch {
+      setNotice({ ok: false, text: 'Can’t reach the server. Try again in a moment.' })
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   function handleSubmit(e) {
     e.preventDefault()
     if (isNew) create()
@@ -323,7 +339,7 @@ function InvoiceForm({ clients, initial, onGone }) {
               <FloppyDisk size={16} />{saving ? 'Creating…' : 'Create draft'}
             </button>
           )}
-          {canAutosave && (
+          {invoice && (
             <div className="editor-actions">
               {status === 'saving' && (
                 <div className="save-status"><CloudArrowUp size={16} /><span role="status">Saving…</span></div>
@@ -341,9 +357,17 @@ function InvoiceForm({ clients, initial, onGone }) {
                   {problem.kind === 'failed' && <button type="button" className="link-btn" onClick={save}>Try again</button>}
                 </div>
               )}
-              <button type="button" className="btn-ghost-danger" onClick={askDelete} disabled={saving}>
-                <Trash size={16} />Delete draft
+              {/* The PDF is the saved version, so wait until what's on screen is saved */}
+              <button type="button" className="btn-quiet" onClick={downloadPdf}
+                disabled={downloading || (canAutosave && unsaved)}
+                title={canAutosave && unsaved ? 'Available once your changes are saved' : undefined}>
+                <FilePdf size={16} />{downloading ? 'Preparing…' : 'Download PDF'}
               </button>
+              {canAutosave && (
+                <button type="button" className="btn-ghost-danger" onClick={askDelete} disabled={saving}>
+                  <Trash size={16} />Delete draft
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -29,3 +29,17 @@ export function fieldErrors(data) {
   }
   return out
 }
+
+// Downloads a file (like an invoice PDF) with the same cookie and sign-out handling as every other request
+export async function downloadFile(url, fileName) {
+  const res = await fetch(url)
+  if (res.status === 401) window.dispatchEvent(new Event('auth:expired'))
+  if (!res.ok) return { ok: false, status: res.status }
+  const href = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = href
+  a.download = fileName
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(href), 1000)
+  return { ok: true, status: res.status }
+}

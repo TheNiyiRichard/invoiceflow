@@ -5,6 +5,7 @@ using Invoiceflow.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Invoiceflow.Api.Pdf;
 
 namespace Invoiceflow.Api.Controllers;
 
@@ -49,6 +50,27 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
             .Include(i => i.Client).Include(i => i.LineItems)
             .FirstOrDefaultAsync(i => i.Id == id);
         return invoice is null ? NotFound() : ToDto(invoice);
+    }
+
+        // GET /api/invoices/{id}/pdf: built on the server from the saved invoice, never from what the browser shows
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> Pdf(Guid id)
+    {
+        var invoice = await MyInvoices.AsNoTracking()
+            .Include(i => i.Client).Include(i => i.LineItems)
+            .FirstOrDefaultAsync(i => i.Id == id);
+        if (invoice is null) return NotFound(); // someone else's invoice looks exactly like a missing one
+
+        var me = await db.Users.AsNoTracking()
+            .Where(u => u.Id == UserId)
+            .Select(u => new { u.FullName, u.BusinessName, u.Email })
+            .FirstAsync();
+        var sender = new InvoicePdf.Sender(string.IsNullOrWhiteSpace(me.BusinessName) ? me.FullName : me.BusinessName, me.Email ?? "");
+
+        // A financial document: never kept in a browser or shared cache
+        Response.Headers.CacheControl = "no-store";
+        // The file name comes from the server's own number, never from typed text like a client's name
+        return File(InvoicePdf.Render(invoice, sender), "application/pdf", $"{InvoiceMath.FormatNumber(invoice.Number)}.pdf");
     }
 
     [HttpPost]

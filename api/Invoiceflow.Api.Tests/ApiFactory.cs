@@ -82,6 +82,17 @@ public class ApiFactory : WebApplicationFactory<Program>
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, status));
     }
 
+     // As if the invoice was saved when the tax rate was different
+    public async Task SetTaxRate(Guid invoiceId, decimal rate)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var invoice = await db.Invoices.IgnoreQueryFilters().Include(i => i.LineItems).SingleAsync(i => i.Id == invoiceId);
+        invoice.TaxRate = rate;
+        InvoiceMath.Recalculate(invoice);
+        await db.SaveChangesAsync();
+    }
+
      // Runs the overdue check once, as if it were this moment
     public async Task<int> RunOverdueJob(DateTimeOffset now)
     {
