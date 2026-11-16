@@ -6,6 +6,8 @@ import { getJson } from '../api.js'
 import { dueInfo, formatMoney, formatMoneyShort, formatMonth, greeting, initials, moneyParts, timeZone, todayLong } from '../format.js'
 import '../styles/invoices.css'
 import '../styles/dashboard.css'
+import Skeleton, { SkeletonRows } from '../components/Skeleton.jsx'
+
 
 const RECENT = 5
 
@@ -65,6 +67,7 @@ export default function Overview() {
       </div>
 
       {result.failed && <p className="alert" role="alert">Couldn’t load your dashboard. Refresh to try again.</p>}
+      {!result.data && !result.failed && <DashboardSkeleton />}
       {result.data && <Dashboard {...result.data} />}
     </>
   )
@@ -201,6 +204,42 @@ function Dashboard({ stats, flow, recent }) {
             </div>
           )}
       </section>
+    </>
+  )
+}
+
+// Fixed heights, so the placeholder chart looks the same on every load
+const BAR_HEIGHTS = [30, 45, 38, 55, 42, 60, 48, 66, 52, 70, 58, 74]
+
+function DashboardSkeleton() {
+  return (
+    <>
+      <p className="sr-only" role="status">Loading your dashboard…</p>
+      <div aria-hidden="true">
+        <section className="kpis">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="kpi">
+              <Skeleton w={i === 0 ? 130 : 90} h={12} />
+              <Skeleton w={i === 0 ? '70%' : '60%'} h={i === 0 ? 64 : 40} />
+              <Skeleton w={110} h={12} />
+            </div>
+          ))}
+        </section>
+        <section className="chart-card">
+          <div className="card-head"><h2 className="card-title">Cash flow</h2></div>
+          <div className="plot">
+            <div className="bars">
+              {BAR_HEIGHTS.map((h, i) => (
+                <div key={i} className="bar"><Skeleton h={`${h}%`} className="skeleton--bar" /></div>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section className="table-card recent">
+          <div className="card-head recent-head"><h2 className="card-title">Recent invoices</h2></div>
+          <SkeletonRows rows={5} />
+        </section>
+      </div>
     </>
   )
 }

@@ -63,6 +63,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | http://localhost:5173 | React app (calls the API through the Vite proxy) |
 | https://localhost:7171/swagger | API docs (development only) |
 | https://localhost:7171/api/health/db | Database health: Healthy / Unhealthy |
+| https://localhost:7171/api/health/jobs | Background job health: Unhealthy if the overdue check hasn't run in 2 hours |
 
 ## Build log
 
@@ -95,6 +96,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 25 | Nov 12 | Cash-flow endpoint: 12 months of paid vs outstanding |
 | 26 | Nov 13 | Dashboard: KPI band, cash-flow chart and recent invoices |
 | 27 | Nov 14 | Invoice PDFs built on the server, tested against the API |
+| 28 | Nov 15 | Week 4 review: health check for the overdue job, loading skeletons |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

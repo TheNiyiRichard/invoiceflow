@@ -4,6 +4,7 @@ import { CaretLeft, CaretRight, Plus } from '@phosphor-icons/react'
 import { getJson } from '../api.js'
 import { dueInfo, formatDate, formatMoney, initials } from '../format.js'
 import '../styles/invoices.css'
+import { SkeletonRows } from '../components/Skeleton.jsx'
 
 const PAGE_SIZE = 20
 const TABS = ['All', 'Draft', 'Sent', 'Viewed', 'Overdue', 'Paid']
@@ -83,6 +84,14 @@ export default function Invoices() {
       </nav>
 
       {result.failed && !loading && <p className="alert" role="alert">Couldn’t load your invoices. Refresh to try again.</p>}
+
+      {/* First load only. Switching tabs keeps the old table, dimmed, until the new one arrives. */}
+      {loading && !data && (
+        <div className="table-card">
+          <p className="sr-only" role="status">Loading invoices…</p>
+          <SkeletonRows rows={8} />
+        </div>
+      )}
 
       {data?.items.length === 0 && (
         <div className="empty">

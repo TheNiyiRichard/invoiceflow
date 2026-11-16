@@ -6,6 +6,7 @@ import Dialog from '../components/Dialog.jsx'
 import TextField from '../components/TextField.jsx'
 import '../styles/invoices.css'
 import '../styles/clients.css'
+import Skeleton from '../components/Skeleton.jsx'
 
 const byName = (a, b) => a.name.localeCompare(b.name)
 
@@ -53,6 +54,19 @@ export default function Clients() {
 
       {notice && <p className="notice notice--ok page-notice" role="status">{notice}</p>}
       {failed && <p className="alert" role="alert">Couldn’t load your clients. Refresh to try again.</p>}
+      {clients === null && !failed && (
+        <>
+          <p className="sr-only" role="status">Loading your clients…</p>
+          <ul className="list" aria-hidden="true">
+            {[150, 120, 170, 135].map((w) => (
+              <li key={w}>
+                <span className="list-main"><Skeleton w={w} /><Skeleton w={w * 0.6} h={12} /></span>
+                <Skeleton w={160} h={12} className="list-meta" />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {clients?.length === 0 && <div className="empty"><p>No clients yet. Add your first one to start invoicing.</p></div>}
       {clients?.length > 0 && (
         <ul className="list">

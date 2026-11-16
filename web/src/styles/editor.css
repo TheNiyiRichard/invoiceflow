@@ -76,3 +76,9 @@
 .btn-quiet { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--color-ink-2); font-size: 13.5px; font-weight: 500; cursor: pointer; }
 .btn-quiet:hover { background: var(--color-sunken); color: var(--color-ink); }
 .btn-quiet:disabled { opacity: .5; cursor: default; }
+
+/* Loading */
+.skeleton--title { margin-top: 12px; }
+.skeleton-fields { margin-top: 28px; display: grid; gap: 14px; }
+.skeleton-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.skeleton--sheet { border-radius: var(--radius-md); }

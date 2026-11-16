@@ -9,6 +9,7 @@ import { addDays, daysBetween, today } from '../format.js'
 import { AMOUNT_PATTERN, formatCents, previewTotals, toHundredths } from '../money.js'
 import '../styles/invoices.css'
 import '../styles/editor.css'
+import Skeleton from '../components/Skeleton.jsx'
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_LINES = 100
@@ -109,7 +110,7 @@ function InvoiceLoader({ id }) {
     )
   }
   if (loadError) return <p className="alert" role="alert">Couldn’t load this invoice. Refresh to try again.</p>
-  if (!clients || (!isNew && !invoice)) return <p className="muted">Loading…</p>
+  if (!clients || (!isNew && !invoice)) return <EditorSkeleton />
 
   return <InvoiceForm clients={clients} initial={invoice} onGone={() => setLoadError('notfound')} />
 }
@@ -502,5 +503,33 @@ function InvoiceForm({ clients, initial, onGone }) {
         </div>
       </Dialog>
     </div>
+  )
+}
+
+function EditorSkeleton() {
+  return (
+    <>
+      <p className="sr-only" role="status">Loading invoice…</p>
+      <div className="editor-layout" aria-hidden="true">
+        <div className="editor">
+          <div className="editor-head">
+            <div>
+              <Skeleton w={70} h={12} />
+              <Skeleton w={220} h={40} className="skeleton--title" />
+            </div>
+          </div>
+          <div className="skeleton-fields">
+            <Skeleton h={40} />
+            <div className="skeleton-pair"><Skeleton h={40} /><Skeleton h={40} /></div>
+            <Skeleton h={40} />
+            <Skeleton h={40} />
+          </div>
+        </div>
+        <aside className="preview-panel">
+          <p className="preview-label">Live preview</p>
+          <Skeleton h={460} className="skeleton--sheet" />
+        </aside>
+      </div>
+    </>
   )
 }
