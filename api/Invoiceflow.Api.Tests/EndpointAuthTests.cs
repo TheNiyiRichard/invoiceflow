@@ -17,6 +17,7 @@ public class EndpointAuthTests(ApiFactory factory)
         "POST /api/auth/login",
         "GET /api/health",
         "GET /api/health/db",
+        "GET /api/health/jobs",
     ];
 
     [Fact]

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Invoiceflow.Api.Jobs;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 // QuestPDF: free Community licence (individuals and businesses under $1M a year)
@@ -77,7 +78,12 @@ builder.Services.AddRateLimiter(o =>
         }));
 });
 
-builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
+// Tagged, so each URL runs only its own check: a stopped job never makes the database look down
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>(tags: ["db"])
+    .AddCheck<JobsHealthCheck>("jobs", tags: ["jobs"]);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<JobHeartbeat>();
 builder.Services.AddScoped<OverdueInvoices>();
 // Tests run the check themselves with a fixed clock, so the hourly timer stays off there
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -101,5 +107,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/api/health/db").AllowAnonymous();
+// One word each (Healthy/Unhealthy) and no details. Signed out, because uptime monitors are.
+app.MapHealthChecks("/api/health/db", new HealthCheckOptions { Predicate = c => c.Tags.Contains("db") }).AllowAnonymous();
+app.MapHealthChecks("/api/health/jobs", new HealthCheckOptions { Predicate = c => c.Tags.Contains("jobs") }).AllowAnonymous();
 app.Run();

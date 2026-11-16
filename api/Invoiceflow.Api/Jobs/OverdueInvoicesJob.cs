@@ -1,7 +1,7 @@
 namespace Invoiceflow.Api.Jobs;
 
 // Runs inside the API: once at startup, then every hour
-public class OverdueInvoicesJob(IServiceScopeFactory scopes, ILogger<OverdueInvoicesJob> logger) : BackgroundService
+public class OverdueInvoicesJob(IServiceScopeFactory scopes, JobHeartbeat heartbeat, ILogger<OverdueInvoicesJob> logger) : BackgroundService
 {
     static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
@@ -16,13 +16,16 @@ public class OverdueInvoicesJob(IServiceScopeFactory scopes, ILogger<OverdueInvo
                 using var scope = scopes.CreateScope();
                 var overdue = scope.ServiceProvider.GetRequiredService<OverdueInvoices>();
                 var marked = await overdue.MarkAsync(DateTimeOffset.UtcNow, stoppingToken);
+                heartbeat.Beat();
 
-                // A count only: no client names or amounts in the logs
-                if (marked > 0) logger.LogInformation("Marked {Count} invoice(s) overdue", marked);
+                // Every run, even when it's 0: a missing line means the job stopped, not that it was a quiet hour.
+                // A count only: no client names or amounts in the logs.
+                logger.LogInformation("Overdue check done: {Count} invoice(s) marked overdue", marked);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // A failed run (database down, say) must not take the API down. The next hour tries again.
+                // A failed run (database down, say) must not take the API down. No heartbeat, so
+                // /api/health/jobs goes Unhealthy if it keeps failing for 2 hours.
                 logger.LogError(ex, "Overdue invoice check failed");
             }
         }
