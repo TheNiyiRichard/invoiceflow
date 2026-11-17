@@ -19,7 +19,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - [x] Secure cookie sessions with account lockout
 - [x] Per-user data isolation (IDOR protection), covered by automated tests
 - [ ] Two-factor sign-in (TOTP) with recovery codes
-- [ ] Signed, expiring payment links (HMAC-SHA256)
+- [x] Signed, expiring payment links (HMAC-SHA256)
 - [ ] Verified Stripe webhooks
 - [ ] Tamper-evident audit log
 - [ ] Role-based access (Owner, Accountant, Viewer)
@@ -33,6 +33,9 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - `web/`: React front end
 
 ## Run it locally
+$bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+dotnet user-secrets set "PaymentLinks:Key" ([Convert]::ToBase64String($bytes)) --project api/Invoiceflow.Api
+
 
 **You need:** .NET 10 SDK · Node.js LTS · SQL Server 2022 (Developer edition)
 
@@ -97,6 +100,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 26 | Nov 13 | Dashboard: KPI band, cash-flow chart and recent invoices |
 | 27 | Nov 14 | Invoice PDFs built on the server, tested against the API |
 | 28 | Nov 15 | Week 4 review: health check for the overdue job, loading skeletons |
+| 29 | Nov 16 | Signed, expiring payment links (HMAC-SHA256) |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

@@ -1,12 +1,13 @@
 using System.Threading.RateLimiting;
 using Invoiceflow.Api.Auth;
 using Invoiceflow.Api.Data;
+using Invoiceflow.Api.Jobs;
 using Invoiceflow.Api.Models;
+using Invoiceflow.Api.Payments;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Invoiceflow.Api.Jobs;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 // QuestPDF: free Community licence (individuals and businesses under $1M a year)
@@ -20,6 +21,11 @@ builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' missing. Set it with dotnet user-secrets.");
+
+// Signs payment links. A secret, so it lives in user-secrets like the connection string, never in git.
+var paymentLinkKey = PaymentLinks.ReadKey(builder.Configuration["PaymentLinks:Key"]);
+var webUrl = builder.Configuration["App:WebUrl"]
+    ?? throw new InvalidOperationException("App:WebUrl missing. Set it in appsettings.json.");
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
@@ -63,20 +69,20 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
 });
 
-// Max 10 login/register attempts per minute from one IP address (tests raise it, see ApiFactory)
+// Per IP address, per minute. Tests raise the sign-in limit, see ApiFactory.
 var authPerMinute = builder.Configuration.GetValue("RateLimits:AuthPerMinute", 10);
+var payPerMinute = builder.Configuration.GetValue("RateLimits:PayPerMinute", 30);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = authPerMinute,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        }));
+    o.AddPolicy("auth", ctx => PerIp(ctx, authPerMinute)); // login and register
+    o.AddPolicy("pay", ctx => PerIp(ctx, payPerMinute));   // public payment links
 });
+
+static RateLimitPartition<string> PerIp(HttpContext ctx, int perMinute) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
 
 // Tagged, so each URL runs only its own check: a stopped job never makes the database look down
 builder.Services.AddHealthChecks()
@@ -84,6 +90,7 @@ builder.Services.AddHealthChecks()
     .AddCheck<JobsHealthCheck>("jobs", tags: ["jobs"]);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JobHeartbeat>();
+builder.Services.AddSingleton(sp => new PaymentLinks(paymentLinkKey, webUrl, sp.GetRequiredService<TimeProvider>()));
 builder.Services.AddScoped<OverdueInvoices>();
 // Tests run the check themselves with a fixed clock, so the hourly timer stays off there
 if (!builder.Environment.IsEnvironment("Testing"))

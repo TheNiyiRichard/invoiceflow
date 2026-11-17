@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Invoiceflow.Api.Pdf;
+using Invoiceflow.Api.Payments;
 
 namespace Invoiceflow.Api.Controllers;
 
@@ -13,7 +14,7 @@ namespace Invoiceflow.Api.Controllers;
 // and EndpointAuthTests proves these routes refuse signed-out requests.
 [ApiController]
 [Route("api/invoices")]
-public class InvoicesController(AppDbContext db, CurrentUser currentUser) : ControllerBase
+public class InvoicesController(AppDbContext db, CurrentUser currentUser, PaymentLinks links) : ControllerBase
 {
     const int MaxPageSize = 50;
     const int MaxNumberAttempts = 5;
@@ -71,6 +72,23 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser) : Cont
         Response.Headers.CacheControl = "no-store";
         // The file name comes from the server's own number, never from typed text like a client's name
         return File(InvoicePdf.Render(invoice, sender), "application/pdf", $"{InvoiceMath.FormatNumber(invoice.Number)}.pdf");
+    }
+
+    // POST /api/invoices/{id}/payment-link: a signed link the client can pay with, valid for 30 days.
+    // Nothing is saved. Each call signs a fresh link, and older ones keep working until they expire.
+    [HttpPost("{id:guid}/payment-link")]
+    public async Task<ActionResult<PaymentLinkDto>> PaymentLink(Guid id)
+    {
+        var invoice = await MyInvoices.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id);
+        if (invoice is null) return NotFound();
+
+        // Only invoices that are out with the client and still unpaid
+        if (invoice.Status is InvoiceStatus.Draft or InvoiceStatus.Paid)
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: invoice.Status == InvoiceStatus.Draft ? "Send the invoice before sharing a payment link." : "This invoice is already paid.");
+
+        var (url, expiresAt) = links.CreateLink(invoice.Id);
+        return new PaymentLinkDto(url, expiresAt);
     }
 
     [HttpPost]

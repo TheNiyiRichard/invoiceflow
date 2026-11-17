@@ -6,11 +6,6 @@ namespace Invoiceflow.Api.Tests;
 // The heartbeat on its own, with a clock the test controls
 public class JobHeartbeatTests
 {
-    sealed class TestClock(DateTimeOffset start) : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = start;
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
 
     static readonly DateTimeOffset Start = new(2026, 11, 15, 9, 0, 0, TimeSpan.Zero);
 

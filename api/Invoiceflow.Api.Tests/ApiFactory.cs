@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Invoiceflow.Api.Models;
 using Invoiceflow.Api.Jobs;
+using System.Security.Cryptography;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -29,6 +30,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         // All test classes share one sign-in limiter. The real app keeps 10 a minute.
         builder.UseSetting("RateLimits:AuthPerMinute", "100");
+        // A fresh signing key every run. Tests never see the real one.
+        builder.UseSetting("PaymentLinks:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
