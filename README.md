@@ -13,6 +13,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - **Database:** SQL Server
 - **Payments:** Stripe (test mode)
 - **PDFs:** QuestPDF (Community licence)
+- **Email:** SMTP via MailKit (Mailtrap sandbox in development)
 
 ## Security features (planned)
 
@@ -35,6 +36,8 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 ## Run it locally
 $bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
 dotnet user-secrets set "PaymentLinks:Key" ([Convert]::ToBase64String($bytes)) --project api/Invoiceflow.Api
+dotnet user-secrets set "Smtp:Username" "your-mailtrap-username" --project api/Invoiceflow.Api
+dotnet user-secrets set "Smtp:Password" "your-mailtrap-password" --project api/Invoiceflow.Api
 
 
 **You need:** .NET 10 SDK · Node.js LTS · SQL Server 2022 (Developer edition)
@@ -101,6 +104,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 27 | Nov 14 | Invoice PDFs built on the server, tested against the API |
 | 28 | Nov 15 | Week 4 review: health check for the overdue job, loading skeletons |
 | 29 | Nov 16 | Signed, expiring payment links (HMAC-SHA256) |
+| 30 | Nov 17 | Send invoices by email with the PDF and a signed payment link |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

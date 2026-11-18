@@ -9,6 +9,9 @@ using Microsoft.Extensions.Hosting;
 using Invoiceflow.Api.Models;
 using Invoiceflow.Api.Jobs;
 using System.Security.Cryptography;
+using Invoiceflow.Api.Mail;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -22,6 +25,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     const string Password = "copper lantern harbour drift";
     readonly Dictionary<string, HttpClient> users = [];
+        // Every email the API "sends" during the test run
+    public FakeMailer Mailbox { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -32,6 +37,13 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("RateLimits:AuthPerMinute", "100");
         // A fresh signing key every run. Tests never see the real one.
         builder.UseSetting("PaymentLinks:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+        builder.UseSetting("RateLimits:SendPerHour", "100");
+        // No real email from tests: every message lands in Mailbox
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IMailer>();
+            services.AddSingleton<IMailer>(Mailbox);
+        });
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -76,7 +88,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         return browser;
     }
 
-     // There's no "send" endpoint yet (Day 30), so tests move an invoice out of Draft directly in the test database
+    // Jumps an invoice straight to a status, skipping email and payment, for tests that don't care how it got there
     public async Task SetStatus(Guid invoiceId, InvoiceStatus status)
     {
         using var scope = Services.CreateScope();

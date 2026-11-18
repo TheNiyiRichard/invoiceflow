@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CheckCircle, CloudArrowUp, FilePdf, FloppyDisk, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
+import { ArrowLeft, CheckCircle, CloudArrowUp, FilePdf, FloppyDisk, PaperPlaneTilt, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
 import { deleteJson, downloadFile, fieldErrors, getJson, postJson, putJson } from '../api.js'
 import { useAuth } from '../auth/AuthContext.js'
 import Dialog from '../components/Dialog.jsx'
@@ -20,6 +20,10 @@ const PROBLEMS = {
   invalid: 'Not saved: some fields are incomplete',
   rejected: 'Not saved: check the highlighted fields',
   failed: 'Not saved: couldn’t reach the server',
+}
+const SEND_ERRORS = {
+  429: 'You’ve sent a lot of invoices in the last hour. Try again later.',
+  502: 'Couldn’t send the email, so nothing went out. It’s still a draft: try again in a moment.',
 }
 
 const newLine = () => ({ key: crypto.randomUUID(), description: '', quantity: '1', unitPrice: '' })
@@ -135,6 +139,9 @@ function InvoiceForm({ clients, initial, onGone }) {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [confirmSend, setConfirmSend] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
 
   const locked = invoice !== null && invoice.status !== 'Draft'
   const canAutosave = !isNew && !locked
@@ -147,6 +154,7 @@ function InvoiceForm({ clients, initial, onGone }) {
   const totals = previewTotals(form.lineItems, taxRate)
   const terms = daysBetween(form.issueDate, form.dueDate)
   const err = (key) => errors[key.toLowerCase()]
+  const billTo = clients.find((c) => c.id === form.clientId) ?? null
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }))
   const updateLine = (key, patch) =>
@@ -268,6 +276,39 @@ function InvoiceForm({ clients, initial, onGone }) {
     }
   }
 
+    function askSend() {
+    setSendError('')
+    setConfirmSend(true)
+  }
+
+  // The server sends what's saved. If the email fails, it stays a draft.
+  async function sendInvoice() {
+    setSending(true)
+    setSendError('')
+    try {
+      const res = await postJson(`/api/invoices/${invoice.id}/send`, {})
+      if (res.ok) {
+        const fresh = toForm(res.data)
+        setInvoice(res.data)
+        setForm(fresh)
+        setSavedBody(bodyKey(fresh))
+        setConfirmSend(false)
+        setNotice({ ok: true, text: `${res.data.number} sent to ${billTo?.email ?? 'your client'}.` })
+      } else if (res.status === 409) {
+        setConfirmSend(false)
+        await reload('This invoice was already sent.')
+      } else if (res.status === 404) {
+        onGone()
+      } else {
+        setSendError(SEND_ERRORS[res.status] ?? 'Something went wrong. Try again.')
+      }
+    } catch {
+      setSendError('Can’t reach the server. Try again in a moment.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   function handleSubmit(e) {
     e.preventDefault()
     if (isNew) create()
@@ -365,8 +406,16 @@ function InvoiceForm({ clients, initial, onGone }) {
                 <FilePdf size={16} />{downloading ? 'Preparing…' : 'Download PDF'}
               </button>
               {canAutosave && (
-                <button type="button" className="btn-ghost-danger" onClick={askDelete} disabled={saving}>
+                <button type="button" className="btn-ghost-danger" onClick={askDelete} disabled={saving || sending}>
                   <Trash size={16} />Delete draft
+                </button>
+              )}
+              {/* Sends what's saved, so wait until what's on screen is saved */}
+              {canAutosave && (
+                <button type="button" className="btn-primary" onClick={askSend}
+                  disabled={saving || unsaved || sending}
+                  title={unsaved ? 'Available once your changes are saved' : undefined}>
+                  <PaperPlaneTilt size={16} />Send invoice
                 </button>
               )}
             </div>
@@ -499,6 +548,19 @@ function InvoiceForm({ clients, initial, onGone }) {
           <button type="button" className="btn-secondary" onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</button>
           <button type="button" className="btn-danger" onClick={deleteDraft} disabled={deleting}>
             <Trash size={16} />{deleting ? 'Deleting…' : 'Delete draft'}
+          </button>
+        </div>
+      </Dialog>
+      <Dialog open={confirmSend} title={`Send ${invoice?.number}?`} onClose={() => setConfirmSend(false)}>
+        <p className="dialog-text">
+          It goes to <strong>{billTo?.name}</strong> at {billTo?.email}, with the PDF attached and a link to pay.
+          Once it’s sent, it can’t be edited or deleted.
+        </p>
+        {sendError && <p className="notice notice--error" role="alert">{sendError}</p>}
+        <div className="dialog-actions">
+          <button type="button" className="btn-secondary" onClick={() => setConfirmSend(false)} disabled={sending}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={sendInvoice} disabled={sending}>
+            <PaperPlaneTilt size={16} />{sending ? 'Sending…' : 'Send invoice'}
           </button>
         </div>
       </Dialog>

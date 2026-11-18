@@ -15,9 +15,9 @@ static class TestApi
         lineItems = new[] { new { description, quantity = 2, unitPrice = 150 } },
     };
 
-    public static async Task<ClientDto> AddClient(this HttpClient browser, string name = "Test client")
+    public static async Task<ClientDto> AddClient(this HttpClient browser, string name = "Test client", string email = "client@example.com")
     {
-        var res = await browser.PostAsJsonAsync("/api/clients", new { name, email = "client@example.com" });
+        var res = await browser.PostAsJsonAsync("/api/clients", new { name, email });
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         return (await res.Content.ReadFromJsonAsync<ClientDto>())!;
     }

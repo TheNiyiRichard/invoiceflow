@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Invoiceflow.Api.Mail;
 
 var builder = WebApplication.CreateBuilder(args);
 // QuestPDF: free Community licence (individuals and businesses under $1M a year)
@@ -72,11 +74,16 @@ builder.Services.ConfigureApplicationCookie(o =>
 // Per IP address, per minute. Tests raise the sign-in limit, see ApiFactory.
 var authPerMinute = builder.Configuration.GetValue("RateLimits:AuthPerMinute", 10);
 var payPerMinute = builder.Configuration.GetValue("RateLimits:PayPerMinute", 30);
+var sendPerHour = builder.Configuration.GetValue("RateLimits:SendPerHour", 20);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("auth", ctx => PerIp(ctx, authPerMinute)); // login and register
     o.AddPolicy("pay", ctx => PerIp(ctx, payPerMinute));   // public payment links
+    // Sending email: per signed-in user, so nobody can use Invoiceflow to spam people
+    o.AddPolicy("send", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "signed-out",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = sendPerHour, Window = TimeSpan.FromHours(1), QueueLimit = 0 }));
 });
 
 static RateLimitPartition<string> PerIp(HttpContext ctx, int perMinute) =>
@@ -91,6 +98,9 @@ builder.Services.AddHealthChecks()
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JobHeartbeat>();
 builder.Services.AddSingleton(sp => new PaymentLinks(paymentLinkKey, webUrl, sp.GetRequiredService<TimeProvider>()));
+// Email over SMTP. In development that's a Mailtrap sandbox, so nothing reaches a real inbox.
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddSingleton<IMailer, SmtpMailer>();
 builder.Services.AddScoped<OverdueInvoices>();
 // Tests run the check themselves with a fixed clock, so the hourly timer stays off there
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -110,8 +120,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication(); // first, so the send limit can tell users apart
 app.UseRateLimiter();
-app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 // One word each (Healthy/Unhealthy) and no details. Signed out, because uptime monitors are.

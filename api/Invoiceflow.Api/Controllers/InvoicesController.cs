@@ -1,12 +1,14 @@
 using Invoiceflow.Api.Auth;
 using Invoiceflow.Api.Data;
 using Invoiceflow.Api.Dtos;
+using Invoiceflow.Api.Mail;
 using Invoiceflow.Api.Models;
+using Invoiceflow.Api.Payments;
+using Invoiceflow.Api.Pdf;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Invoiceflow.Api.Pdf;
-using Invoiceflow.Api.Payments;
 
 namespace Invoiceflow.Api.Controllers;
 
@@ -14,7 +16,7 @@ namespace Invoiceflow.Api.Controllers;
 // and EndpointAuthTests proves these routes refuse signed-out requests.
 [ApiController]
 [Route("api/invoices")]
-public class InvoicesController(AppDbContext db, CurrentUser currentUser, PaymentLinks links) : ControllerBase
+public class InvoicesController(AppDbContext db, CurrentUser currentUser, PaymentLinks links, IMailer mailer, ILogger<InvoicesController> logger) : ControllerBase
 {
     const int MaxPageSize = 50;
     const int MaxNumberAttempts = 5;
@@ -53,7 +55,7 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         return invoice is null ? NotFound() : ToDto(invoice);
     }
 
-        // GET /api/invoices/{id}/pdf: built on the server from the saved invoice, never from what the browser shows
+    // GET /api/invoices/{id}/pdf: built on the server from the saved invoice, never from what the browser shows
     [HttpGet("{id:guid}/pdf")]
     public async Task<IActionResult> Pdf(Guid id)
     {
@@ -62,16 +64,10 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
             .FirstOrDefaultAsync(i => i.Id == id);
         if (invoice is null) return NotFound(); // someone else's invoice looks exactly like a missing one
 
-        var me = await db.Users.AsNoTracking()
-            .Where(u => u.Id == UserId)
-            .Select(u => new { u.FullName, u.BusinessName, u.Email })
-            .FirstAsync();
-        var sender = new InvoicePdf.Sender(string.IsNullOrWhiteSpace(me.BusinessName) ? me.FullName : me.BusinessName, me.Email ?? "");
-
         // A financial document: never kept in a browser or shared cache
         Response.Headers.CacheControl = "no-store";
         // The file name comes from the server's own number, never from typed text like a client's name
-        return File(InvoicePdf.Render(invoice, sender), "application/pdf", $"{InvoiceMath.FormatNumber(invoice.Number)}.pdf");
+        return File(InvoicePdf.Render(invoice, await SenderAsync()), "application/pdf", $"{InvoiceMath.FormatNumber(invoice.Number)}.pdf");
     }
 
     // POST /api/invoices/{id}/payment-link: a signed link the client can pay with, valid for 30 days.
@@ -91,13 +87,55 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         return new PaymentLinkDto(url, expiresAt);
     }
 
+    // POST /api/invoices/{id}/send: emails the client the PDF and a signed payment link. From then on it's locked.
+    // Limited per user, so nobody can use Invoiceflow to spam people.
+    [HttpPost("{id:guid}/send")]
+    [EnableRateLimiting("send")]
+    public async Task<ActionResult<InvoiceDto>> Send(Guid id)
+    {
+        // Claimed in one statement: only a draft can become Sent. If two clicks arrive together,
+        // the database lets exactly one through, so the client never gets the email twice.
+        var claimed = await MyInvoices
+            .Where(i => i.Id == id && i.Status == InvoiceStatus.Draft)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, InvoiceStatus.Sent));
+        if (claimed == 0)
+            return await MyInvoices.AnyAsync(i => i.Id == id)
+                ? Problem(statusCode: StatusCodes.Status409Conflict, title: "This invoice has already been sent.")
+                : NotFound();
+
+        var invoice = await MyInvoices.Include(i => i.Client).Include(i => i.LineItems).FirstAsync(i => i.Id == id);
+
+        // The GST rate is locked now, when it's sent, not when the draft was started
+        invoice.TaxRate = InvoiceMath.GstRate;
+        InvoiceMath.Recalculate(invoice);
+        invoice.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        var sender = await SenderAsync();
+        var (url, expiresAt) = links.CreateLink(invoice.Id);
+        try
+        {
+            await mailer.SendAsync(InvoiceEmail.Build(invoice, sender, url, expiresAt, InvoicePdf.Render(invoice, sender)));
+        }
+        catch (Exception ex)
+        {
+            // The email didn't go out, so it goes back to being a draft that can be sent again. Logged by id.
+            logger.LogError(ex, "Sending invoice {InvoiceId} failed", invoice.Id);
+            invoice.Status = InvoiceStatus.Draft;
+            await db.SaveChangesAsync();
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Couldn't send the email. The invoice is still a draft.");
+        }
+
+        return ToDto(invoice);
+    }
+
     [HttpPost]
     public async Task<ActionResult<InvoiceDto>> Create(InvoiceInput input)
     {
         var client = await CheckInput(input);
         if (client is null) return ValidationProblem(ModelState);
 
-        // Starts as Draft, with today's GST rate saved on it
+        // Starts as Draft. The GST rate shown now is replaced with the current rate when it's sent.
         var invoice = new Invoice { OwnerId = UserId, Client = client, TaxRate = InvoiceMath.GstRate };
         Apply(invoice, input);
         db.Invoices.Add(invoice);
@@ -139,6 +177,16 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         db.Invoices.Remove(invoice); // its line items go too (cascade)
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // Who the invoice is from: the business name if there is one, otherwise the person's name
+    async Task<InvoicePdf.Sender> SenderAsync()
+    {
+        var me = await db.Users.AsNoTracking()
+            .Where(u => u.Id == UserId)
+            .Select(u => new { u.FullName, u.BusinessName, u.Email })
+            .FirstAsync();
+        return new InvoicePdf.Sender(string.IsNullOrWhiteSpace(me.BusinessName) ? me.FullName : me.BusinessName, me.Email ?? "");
     }
 
     // Checks attributes can't do. Returns the client, or null with errors in ModelState.
