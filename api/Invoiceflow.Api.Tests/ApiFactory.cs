@@ -38,6 +38,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         // A fresh signing key every run. Tests never see the real one.
         builder.UseSetting("PaymentLinks:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("RateLimits:SendPerHour", "100");
+        builder.UseSetting("RateLimits:PayPerMinute", "100");
         // No real email from tests: every message lands in Mailbox
         builder.ConfigureTestServices(services =>
         {

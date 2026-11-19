@@ -105,6 +105,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 28 | Nov 15 | Week 4 review: health check for the overdue job, loading skeletons |
 | 29 | Nov 16 | Signed, expiring payment links (HMAC-SHA256) |
 | 30 | Nov 17 | Send invoices by email with the PDF and a signed payment link |
+| 31 | Nov 18 | Public payment page: opens only with a signed link, marks invoices Viewed |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

@@ -54,6 +54,10 @@
   --color-bar-paid: #A9C6B6;
   --color-bar-hatch: rgba(30, 91, 67, 0.55);
 
+    /* Payment page (screen 1e) */
+  --color-verified: #EAF1EC;
+  --color-verified-border: #CFE0D5;
+
   /* Type */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Geist', system-ui, sans-serif;
