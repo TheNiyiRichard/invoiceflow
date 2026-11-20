@@ -16,7 +16,7 @@ namespace Invoiceflow.Api.Controllers;
 [AllowAnonymous]
 [EnableRateLimiting("pay")]
 [Route("api/pay")]
-public class PayController(AppDbContext db, PaymentLinks links, CurrentUser currentUser) : ControllerBase
+public class PayController(AppDbContext db, PaymentLinks links, CurrentUser currentUser, IPaymentGateway payments, ILogger<PayController> logger) : ControllerBase
 {
     // GET /api/pay/{token}: what the payment page shows. Reads only, never changes anything.
     [HttpGet("{token}")]
@@ -74,6 +74,56 @@ public class PayController(AppDbContext db, PaymentLinks links, CurrentUser curr
                 .SetProperty(i => i.UpdatedAt, DateTime.UtcNow));
         return NoContent();
     }
+
+        // Stripe's minimum card charge in CAD is $0.50
+    const long MinimumCents = 50;
+
+    // POST /api/pay/{token}/intent: starts (or picks up) the card payment for this invoice.
+    // There is no request body: the amount always comes from the saved invoice, never from the browser.
+    [HttpPost("{token}/intent")]
+    public async Task<ActionResult<CardPaymentDto>> Intent(string token, CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+
+        var (problem, invoiceId) = Open(token);
+        if (problem is not null) return problem;
+
+        var invoice = await db.Invoices.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.Id == invoiceId && i.Status != InvoiceStatus.Draft, ct);
+        if (invoice is null) return NotValid();
+        if (invoice.Status == InvoiceStatus.Paid) return AlreadyPaid();
+
+        var cents = (long)(invoice.Total * 100); // decimal(18,2), so this is exact
+        if (cents < MinimumCents)
+            return Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "This invoice is too small to pay by card.");
+
+        try
+        {
+            // One payment per invoice: a refresh or a second tab picks up the same one, so it can't be paid twice
+            var payment = invoice.StripePaymentIntentId is { } existing ? await payments.GetAsync(existing, ct) : null;
+            if (payment is { Status: "succeeded" or "processing" }) return AlreadyPaid();
+
+            if (payment is null or { Status: "canceled" })
+            {
+                // Same key, same payment: if two requests race here, Stripe hands both the same one
+                var key = payment is null ? $"invoice-{invoice.Id}-first" : $"invoice-{invoice.Id}-after-{payment.Id}";
+                payment = await payments.CreateAsync(
+                    new CardPaymentRequest(invoice.Id, cents, "cad", $"Invoice {InvoiceMath.FormatNumber(invoice.Number)}"), key, ct);
+                invoice.StripePaymentIntentId = payment.Id;
+                await db.SaveChangesAsync(ct);
+            }
+
+            return new CardPaymentDto(payment.ClientSecret, payments.PublishableKey);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Logged by invoice id only: no token, no amounts
+            logger.LogError(ex, "Starting card payment for invoice {InvoiceId} failed", invoice.Id);
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Card payment isn't available right now.");
+        }
+    }
+
+    ObjectResult AlreadyPaid() => Problem(statusCode: StatusCodes.Status409Conflict, title: "This invoice has already been paid.");
 
     // Signature first. "Expired" is only said once the link is known to be genuine.
     (ObjectResult? Problem, Guid InvoiceId) Open(string token)

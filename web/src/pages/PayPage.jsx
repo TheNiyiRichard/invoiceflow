@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-import { CheckCircle, LockSimple, SealCheck, ShieldCheck, WarningCircle } from '@phosphor-icons/react'
+import { CheckCircle, LockSimple, SealCheck, WarningCircle } from '@phosphor-icons/react'
+import PayCard from '../components/PayCard.jsx'
 import { getJson, postJson } from '../api.js'
 import { formatDate, formatMoney, initials, moneyParts } from '../format.js'
 import Skeleton from '../components/Skeleton.jsx'
@@ -70,7 +71,7 @@ export default function PayPage() {
             <p>{problem[1]}</p>
           </div>
         )}
-        {invoice && <PayInvoice invoice={invoice} />}
+        {invoice && <PayInvoice invoice={invoice} token={token} />}
       </main>
 
       <footer className="pay-foot">Questions? Reply to the invoice email.</footer>
@@ -78,7 +79,7 @@ export default function PayPage() {
   )
 }
 
-function PayInvoice({ invoice }) {
+function PayInvoice({ invoice, token }) {
   const [whole, cents] = moneyParts(invoice.total)
   const paid = invoice.status === 'Paid'
   const ratePercent = Number((invoice.taxRate * 100).toFixed(2))
@@ -127,13 +128,7 @@ function PayInvoice({ invoice }) {
             <p className="pay-card-text">Thank you. There’s nothing left to pay on this invoice.</p>
           </>
         ) : (
-          <>
-            {/* Stripe card payment arrives here on Day 32 */}
-            <h2 id="pay-card-title" className="pay-card-title">Pay invoice</h2>
-            <p className="pay-card-text">Card payment opens here soon.</p>
-            <button type="button" className="pay-btn" disabled><LockSimple size={16} />Pay {formatMoney(invoice.total)}</button>
-            <p className="pay-note"><ShieldCheck size={15} />Card details will go straight to Stripe. Invoiceflow never sees or stores your card number.</p>
-          </>
+          <PayCard token={token} total={invoice.total} />
         )}
       </aside>
     </div>

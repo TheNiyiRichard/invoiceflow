@@ -54,6 +54,10 @@
 .pay-skeleton-amount { margin: 20px 0 16px; }
 .pay-skeleton-card { border-radius: var(--radius-lg); }
 
+/* Card payment (Stripe's form) */
+.pay-element { margin-top: 20px; }
+.pay-error { margin-top: 14px; font-size: 13.5px; line-height: 1.5; color: var(--color-danger); }
+
 @media (max-width: 960px) {
   .pay-grid { grid-template-columns: minmax(0, 1fr); }
   .pay-card { position: static; }

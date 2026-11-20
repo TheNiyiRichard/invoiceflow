@@ -27,6 +27,8 @@ public class Invoice
     
     // When it was paid (UTC). Set by the payment code in Week 5; null until then.
     public DateTime? PaidAt { get; set; }
+    // The Stripe payment for this invoice (a PaymentIntent id). One per invoice, so it can't be paid twice.
+    public string? StripePaymentIntentId { get; set; }
     public List<LineItem> LineItems { get; set; } = [];
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

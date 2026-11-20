@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using Invoiceflow.Api.Mail;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Invoiceflow.Api.Payments;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -25,8 +26,10 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     const string Password = "copper lantern harbour drift";
     readonly Dictionary<string, HttpClient> users = [];
-        // Every email the API "sends" during the test run
+    // Every email the API "sends" during the test run
     public FakeMailer Mailbox { get; } = new();
+    // Stands in for Stripe: no real payments from tests
+    public FakePayments Payments { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -44,6 +47,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<IMailer>();
             services.AddSingleton<IMailer>(Mailbox);
+            services.RemoveAll<IPaymentGateway>();
+            services.AddSingleton<IPaymentGateway>(Payments);
         });
     }
 

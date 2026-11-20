@@ -61,7 +61,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser cu
 
             i.HasIndex(x => new { x.OwnerId, x.Status }); // the invoices list filters by status 
             // INV-0001, INV-0002, etc. is a per-user sequence, so the database refuses duplicates
-            i.HasIndex(x => new { x.OwnerId, x.Number }).IsUnique(); 
+            i.HasIndex(x => new { x.OwnerId, x.Number }).IsUnique();
+            i.Property(x => x.StripePaymentIntentId).HasMaxLength(255);
+            // The Day 33 webhook finds invoices by this, and one payment can never belong to two invoices
+            i.HasIndex(x => x.StripePaymentIntentId).IsUnique(); 
             
             // Same safety net as clients, from day one
             i.HasQueryFilter(x => x.OwnerId == CurrentUserId);

@@ -34,22 +34,24 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - `web/`: React front end
 
 ## Run it locally
-$bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
-dotnet user-secrets set "PaymentLinks:Key" ([Convert]::ToBase64String($bytes)) --project api/Invoiceflow.Api
-dotnet user-secrets set "Smtp:Username" "your-mailtrap-username" --project api/Invoiceflow.Api
-dotnet user-secrets set "Smtp:Password" "your-mailtrap-password" --project api/Invoiceflow.Api
 
-
-**You need:** .NET 10 SDK · Node.js LTS · SQL Server 2022 (Developer edition)
+**You need:** .NET 10 SDK · Node.js LTS · SQL Server 2022 (Developer edition) · free Mailtrap and Stripe (test mode) accounts
 
 **API** (terminal 1, from the repo root)
 ```powershell
 dotnet tool restore
 dotnet dev-certs https --trust
 dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost;Database=InvoiceflowDev;Trusted_Connection=True;TrustServerCertificate=True" --project api/Invoiceflow.Api
+$bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+dotnet user-secrets set "PaymentLinks:Key" ([Convert]::ToBase64String($bytes)) --project api/Invoiceflow.Api
+dotnet user-secrets set "Smtp:Username" "your-mailtrap-username" --project api/Invoiceflow.Api
+dotnet user-secrets set "Smtp:Password" "your-mailtrap-password" --project api/Invoiceflow.Api
+dotnet user-secrets set "Stripe:SecretKey" "sk_test_..." --project api/Invoiceflow.Api
+dotnet user-secrets set "Stripe:PublishableKey" "pk_test_..." --project api/Invoiceflow.Api
 dotnet ef database update --project api/Invoiceflow.Api
-dotnet run --project api/Invoiceflow.Api
+dotnet run --project api/Invoiceflow.Api --launch-profile https
 ```
+Secrets live in user-secrets, never in the repo. Only Stripe **test** keys are accepted.
 
 **Web** (terminal 2)
 ```powershell
@@ -62,7 +64,7 @@ npm run dev
 ```powershell
 dotnet test
 ```
-Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every run.
+Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every run. Email and Stripe are replaced with fakes, so tests never send mail or touch Stripe.
 
 | URL | What it is |
 | --- | --- |
@@ -106,6 +108,8 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 29 | Nov 16 | Signed, expiring payment links (HMAC-SHA256) |
 | 30 | Nov 17 | Send invoices by email with the PDF and a signed payment link |
 | 31 | Nov 18 | Public payment page: opens only with a signed link, marks invoices Viewed |
+| 32 | Nov 19 | Card payments with Stripe (test mode): server-side amount, one payment per invoice |
+
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

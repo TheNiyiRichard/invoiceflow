@@ -101,6 +101,9 @@ builder.Services.AddSingleton(sp => new PaymentLinks(paymentLinkKey, webUrl, sp.
 // Email over SMTP. In development that's a Mailtrap sandbox, so nothing reaches a real inbox.
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddSingleton<IMailer, SmtpMailer>();
+// Card payments through Stripe: test keys only for now (user-secrets)
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+builder.Services.AddSingleton<IPaymentGateway, StripeGateway>();
 builder.Services.AddScoped<OverdueInvoices>();
 // Tests run the check themselves with a fixed clock, so the hourly timer stays off there
 if (!builder.Environment.IsEnvironment("Testing"))
