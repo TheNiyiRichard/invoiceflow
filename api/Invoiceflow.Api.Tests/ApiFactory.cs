@@ -31,6 +31,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     // Stands in for Stripe: no real payments from tests
     public FakePayments Payments { get; } = new();
 
+    // Tests sign their own webhooks with this, the way Stripe would
+    public string WebhookSecret { get; } = $"whsec_test_{Guid.NewGuid():N}";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // "Testing", not "Development": no user-secrets (so no dev connection string) and no Swagger
@@ -42,6 +45,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("PaymentLinks:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("RateLimits:SendPerHour", "100");
         builder.UseSetting("RateLimits:PayPerMinute", "100");
+        builder.UseSetting("Stripe:WebhookSecret", WebhookSecret);
         // No real email from tests: every message lands in Mailbox
         builder.ConfigureTestServices(services =>
         {

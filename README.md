@@ -21,7 +21,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - [x] Per-user data isolation (IDOR protection), covered by automated tests
 - [ ] Two-factor sign-in (TOTP) with recovery codes
 - [x] Signed, expiring payment links (HMAC-SHA256)
-- [ ] Verified Stripe webhooks
+- [x] Verified Stripe webhooks
 - [ ] Tamper-evident audit log
 - [ ] Role-based access (Owner, Accountant, Viewer)
 - [ ] Encryption of sensitive fields at rest
@@ -48,6 +48,8 @@ dotnet user-secrets set "Smtp:Username" "your-mailtrap-username" --project api/I
 dotnet user-secrets set "Smtp:Password" "your-mailtrap-password" --project api/Invoiceflow.Api
 dotnet user-secrets set "Stripe:SecretKey" "sk_test_..." --project api/Invoiceflow.Api
 dotnet user-secrets set "Stripe:PublishableKey" "pk_test_..." --project api/Invoiceflow.Api
+stripe listen --forward-to https://localhost:7171/api/webhooks/stripe --skip-verify   # separate terminal; prints whsec_…
+dotnet user-secrets set "Stripe:WebhookSecret" "whsec_..." --project api/Invoiceflow.Api
 dotnet ef database update --project api/Invoiceflow.Api
 dotnet run --project api/Invoiceflow.Api --launch-profile https
 ```
@@ -109,7 +111,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 30 | Nov 17 | Send invoices by email with the PDF and a signed payment link |
 | 31 | Nov 18 | Public payment page: opens only with a signed link, marks invoices Viewed |
 | 32 | Nov 19 | Card payments with Stripe (test mode): server-side amount, one payment per invoice |
-
+| 33 | Nov 20 | Verified Stripe webhook: signature, replay and amount checks before marking Paid |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

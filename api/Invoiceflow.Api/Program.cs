@@ -104,6 +104,8 @@ builder.Services.AddSingleton<IMailer, SmtpMailer>();
 // Card payments through Stripe: test keys only for now (user-secrets)
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 builder.Services.AddSingleton<IPaymentGateway, StripeGateway>();
+// Checks Stripe's webhook signatures. Not replaced in tests: they sign their own webhooks, so the real check runs.
+builder.Services.AddSingleton<StripeWebhooks>();
 builder.Services.AddScoped<OverdueInvoices>();
 // Tests run the check themselves with a fixed clock, so the hourly timer stays off there
 if (!builder.Environment.IsEnvironment("Testing"))

@@ -7,6 +7,7 @@ public class StripeSettings
 {
     public string? SecretKey { get; set; }
     public string? PublishableKey { get; set; }
+    public string? WebhookSecret { get; set; } // whsec_…, from `stripe listen` (user-secrets)
 }
 
 public class StripeGateway(IOptions<StripeSettings> options) : IPaymentGateway
