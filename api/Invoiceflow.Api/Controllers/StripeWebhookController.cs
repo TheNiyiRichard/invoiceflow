@@ -1,6 +1,8 @@
 using Invoiceflow.Api.Data;
+using Invoiceflow.Api.Mail;
 using Invoiceflow.Api.Models;
 using Invoiceflow.Api.Payments;
+using Invoiceflow.Api.Pdf;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +15,7 @@ namespace Invoiceflow.Api.Controllers;
 [ApiController]
 [AllowAnonymous]
 [Route("api/webhooks/stripe")]
-public class StripeWebhookController(AppDbContext db, StripeWebhooks webhooks, ILogger<StripeWebhookController> logger) : ControllerBase
+public class StripeWebhookController(AppDbContext db, StripeWebhooks webhooks, IMailer mailer, ILogger<StripeWebhookController> logger) : ControllerBase
 {
     [HttpPost]
     [RequestSizeLimit(256 * 1024)] // Stripe events are a few KB
@@ -52,7 +54,28 @@ public class StripeWebhookController(AppDbContext db, StripeWebhooks webhooks, I
                 .SetProperty(i => i.PaidAt, (DateTime?)paid.PaidAt) // when Stripe took the money, even if this is a late retry
                 .SetProperty(i => i.UpdatedAt, DateTime.UtcNow), ct);
 
+        // Only the delivery that actually marked it Paid sends a receipt, so a repeat never sends a second one
+        if (marked == 1) await SendReceipt(invoice.Id);
+
         logger.LogInformation("Stripe event {EventId}: invoice {InvoiceId} {Result}", paid.EventId, invoice.Id, marked == 1 ? "marked paid" : "was already paid");
         return Ok();
+    }
+
+    // The client's receipt, with the PDF stamped PAID. If the email fails, the payment still stands:
+    // it's logged by id and Stripe still gets its 200 (retrying wouldn't resend it anyway).
+    async Task SendReceipt(Guid invoiceId)
+    {
+        try
+        {
+            var paidInvoice = await db.Invoices.IgnoreQueryFilters().AsNoTracking()
+                .Include(i => i.Client).Include(i => i.LineItems)
+                .FirstAsync(i => i.Id == invoiceId);
+            var sender = await db.SenderAsync(paidInvoice.OwnerId);
+            await mailer.SendAsync(InvoiceEmail.Receipt(paidInvoice, sender, InvoicePdf.Render(paidInvoice, sender)));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Receipt for invoice {InvoiceId} wasn't sent", invoiceId);
+        }
     }
 }

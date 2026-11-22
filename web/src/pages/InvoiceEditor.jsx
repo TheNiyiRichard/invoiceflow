@@ -1,11 +1,11 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CheckCircle, CloudArrowUp, FilePdf, FloppyDisk, PaperPlaneTilt, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
+import { ArrowLeft, BellRinging, CheckCircle, CloudArrowUp, FilePdf, FloppyDisk, PaperPlaneTilt, Plus, Trash, WarningCircle, X } from '@phosphor-icons/react'
 import { deleteJson, downloadFile, fieldErrors, getJson, postJson, putJson } from '../api.js'
 import { useAuth } from '../auth/AuthContext.js'
 import Dialog from '../components/Dialog.jsx'
 import InvoicePreview from '../components/InvoicePreview.jsx'
-import { addDays, daysBetween, today } from '../format.js'
+import { addDays, daysBetween, formatWhen, today } from '../format.js'
 import { AMOUNT_PATTERN, formatCents, previewTotals, toHundredths } from '../money.js'
 import '../styles/invoices.css'
 import '../styles/editor.css'
@@ -24,6 +24,10 @@ const PROBLEMS = {
 const SEND_ERRORS = {
   429: 'You’ve sent a lot of invoices in the last hour. Try again later.',
   502: 'Couldn’t send the email, so nothing went out. It’s still a draft: try again in a moment.',
+}
+const REMIND_ERRORS = {
+  429: 'You’ve sent a lot of emails in the last hour. Try again later.',
+  502: 'Couldn’t send the reminder, so nothing went out. Try again in a moment.',
 }
 
 const newLine = () => ({ key: crypto.randomUUID(), description: '', quantity: '1', unitPrice: '' })
@@ -142,9 +146,13 @@ function InvoiceForm({ clients, initial, onGone }) {
   const [confirmSend, setConfirmSend] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [confirmRemind, setConfirmRemind] = useState(false)
+  const [reminding, setReminding] = useState(false)
+  const [remindError, setRemindError] = useState('')
 
   const locked = invoice !== null && invoice.status !== 'Draft'
   const canAutosave = !isNew && !locked
+  const canRemind = invoice !== null && ['Sent', 'Viewed', 'Overdue'].includes(invoice.status)
   const body = bodyKey(form)
   const unsaved = isNew ? hasContent(form) : body !== savedBody
   const pending = canAutosave && unsaved && body !== problem.body
@@ -276,7 +284,7 @@ function InvoiceForm({ clients, initial, onGone }) {
     }
   }
 
-    function askSend() {
+  function askSend() {
     setSendError('')
     setConfirmSend(true)
   }
@@ -306,6 +314,37 @@ function InvoiceForm({ clients, initial, onGone }) {
       setSendError('Can’t reach the server. Try again in a moment.')
     } finally {
       setSending(false)
+    }
+  }
+
+  function askRemind() {
+    setRemindError('')
+    setConfirmRemind(true)
+  }
+
+  // The PDF and a fresh payment link. The server allows one per invoice per day.
+  async function sendReminder() {
+    setReminding(true)
+    setRemindError('')
+    try {
+      const res = await postJson(`/api/invoices/${invoice.id}/remind`, {})
+      if (res.ok) {
+        setInvoice(res.data)
+        setConfirmRemind(false)
+        setNotice({ ok: true, text: `Reminder sent to ${billTo?.email ?? 'your client'}.` })
+      } else if (res.status === 409) {
+        // Already reminded today, or it was paid in the meantime: show the server's reason with the latest copy
+        setConfirmRemind(false)
+        await reload(res.data?.title ?? 'This reminder couldn’t be sent.')
+      } else if (res.status === 404) {
+        onGone()
+      } else {
+        setRemindError(REMIND_ERRORS[res.status] ?? 'Something went wrong. Try again.')
+      }
+    } catch {
+      setRemindError('Can’t reach the server. Try again in a moment.')
+    } finally {
+      setReminding(false)
     }
   }
 
@@ -418,12 +457,27 @@ function InvoiceForm({ clients, initial, onGone }) {
                   <PaperPlaneTilt size={16} />Send invoice
                 </button>
               )}
+              {canRemind && (
+                <button type="button" className="btn-secondary" onClick={askRemind} disabled={reminding}>
+                  <BellRinging size={16} />Send reminder
+                </button>
+              )}
             </div>
           )}
         </div>
 
         {notice && <p className={notice.ok ? 'notice notice--ok' : 'notice notice--error'} role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}
-        {locked && <p className="notice notice--warn">This invoice is {invoice.status.toLowerCase()}, so it can’t be changed. It’s the record of what your client received.</p>}
+        {invoice?.status === 'Paid' && (
+          <p className="notice notice--ok">
+            Paid in full{invoice.paidAt && ` on ${formatWhen(invoice.paidAt)}`}. It can’t be changed: it’s the record of what your client received and paid.
+          </p>
+        )}
+        {locked && invoice.status !== 'Paid' && (
+          <p className="notice notice--warn">
+            This invoice is {invoice.status.toLowerCase()}, so it can’t be changed. It’s the record of what your client received.
+            {invoice.lastRemindedAt && ` Last reminder sent ${formatWhen(invoice.lastRemindedAt)}.`}
+          </p>
+        )}
 
         {/* Only disabled while locked or creating: autosave never takes the focus away from what you're typing */}
         <fieldset className="editor-body" disabled={locked || (isNew && saving)}>
@@ -551,6 +605,7 @@ function InvoiceForm({ clients, initial, onGone }) {
           </button>
         </div>
       </Dialog>
+
       <Dialog open={confirmSend} title={`Send ${invoice?.number}?`} onClose={() => setConfirmSend(false)}>
         <p className="dialog-text">
           It goes to <strong>{billTo?.name}</strong> at {billTo?.email}, with the PDF attached and a link to pay.
@@ -561,6 +616,20 @@ function InvoiceForm({ clients, initial, onGone }) {
           <button type="button" className="btn-secondary" onClick={() => setConfirmSend(false)} disabled={sending}>Cancel</button>
           <button type="button" className="btn-primary" onClick={sendInvoice} disabled={sending}>
             <PaperPlaneTilt size={16} />{sending ? 'Sending…' : 'Send invoice'}
+          </button>
+        </div>
+      </Dialog>
+
+      <Dialog open={confirmRemind} title={`Send a reminder for ${invoice?.number}?`} onClose={() => setConfirmRemind(false)}>
+        <p className="dialog-text">
+          It goes to <strong>{billTo?.name}</strong> at {billTo?.email}, with the PDF and a new payment link that works for 30 days.
+          You can send one reminder per invoice each day.
+        </p>
+        {remindError && <p className="notice notice--error" role="alert">{remindError}</p>}
+        <div className="dialog-actions">
+          <button type="button" className="btn-secondary" onClick={() => setConfirmRemind(false)} disabled={reminding}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={sendReminder} disabled={reminding}>
+            <BellRinging size={16} />{reminding ? 'Sending…' : 'Send reminder'}
           </button>
         </div>
       </Dialog>

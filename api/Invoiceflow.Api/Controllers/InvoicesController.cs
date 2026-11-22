@@ -129,6 +129,52 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         return ToDto(invoice);
     }
 
+    static readonly TimeSpan ReminderCooldown = TimeSpan.FromHours(24);
+
+    // POST /api/invoices/{id}/remind: emails the client again, with the PDF and a freshly signed 30-day link.
+    // One per invoice per day, on top of the per-user send limit, so nobody can flood a client's inbox.
+    [HttpPost("{id:guid}/remind")]
+    [EnableRateLimiting("send")]
+    public async Task<ActionResult<InvoiceDto>> Remind(Guid id)
+    {
+        var invoice = await MyInvoices.AsNoTracking()
+            .Include(i => i.Client).Include(i => i.LineItems)
+            .FirstOrDefaultAsync(i => i.Id == id);
+        if (invoice is null) return NotFound();
+        if (invoice.Status is not (InvoiceStatus.Sent or InvoiceStatus.Viewed or InvoiceStatus.Overdue))
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Only sent invoices that aren't paid yet can get a reminder.");
+
+        // Claimed in one statement, like sending: two quick clicks can't both get through
+        var now = DateTime.UtcNow;
+        var cutoff = now - ReminderCooldown;
+        var previous = invoice.LastRemindedAt;
+        var claimed = await MyInvoices
+            .Where(i => i.Id == id
+                && (i.Status == InvoiceStatus.Sent || i.Status == InvoiceStatus.Viewed || i.Status == InvoiceStatus.Overdue)
+                && (i.LastRemindedAt == null || i.LastRemindedAt <= cutoff))
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.LastRemindedAt, (DateTime?)now));
+        if (claimed == 0)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "A reminder already went out in the last 24 hours. You can send another tomorrow.");
+
+        var sender = await SenderAsync();
+        var (url, expiresAt) = links.CreateLink(invoice.Id);
+        try
+        {
+            await mailer.SendAsync(InvoiceEmail.Reminder(invoice, sender, url, expiresAt, InvoicePdf.Render(invoice, sender)));
+        }
+        catch (Exception ex)
+        {
+            // Nothing went out, so it doesn't count: the button works again straight away
+            logger.LogError(ex, "Reminder for invoice {InvoiceId} failed", invoice.Id);
+            await MyInvoices.Where(i => i.Id == id && i.LastRemindedAt == now)
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.LastRemindedAt, previous));
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Couldn't send the reminder. Nothing went out, so you can try again.");
+        }
+
+        invoice.LastRemindedAt = now;
+        return ToDto(invoice);
+    }
+
     [HttpPost]
     public async Task<ActionResult<InvoiceDto>> Create(InvoiceInput input)
     {
@@ -179,15 +225,8 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         return NoContent();
     }
 
-    // Who the invoice is from: the business name if there is one, otherwise the person's name
-    async Task<InvoicePdf.Sender> SenderAsync()
-    {
-        var me = await db.Users.AsNoTracking()
-            .Where(u => u.Id == UserId)
-            .Select(u => new { u.FullName, u.BusinessName, u.Email })
-            .FirstAsync();
-        return new InvoicePdf.Sender(string.IsNullOrWhiteSpace(me.BusinessName) ? me.FullName : me.BusinessName, me.Email ?? "");
-    }
+    // Who the invoice is from (shared with the Stripe webhook, see Mail/Senders.cs)
+    Task<InvoicePdf.Sender> SenderAsync() => db.SenderAsync(UserId);
 
     // Checks attributes can't do. Returns the client, or null with errors in ModelState.
     async Task<Client?> CheckInput(InvoiceInput input)
@@ -254,5 +293,8 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         i.LineItems.OrderBy(li => li.Position)
             .Select(li => new LineItemDto(li.Id, li.Position, li.Description, li.Quantity, li.UnitPrice,
                 InvoiceMath.LineAmount(li.Quantity, li.UnitPrice))).ToList(),
-        i.CreatedAt, i.UpdatedAt);
+        i.CreatedAt, i.UpdatedAt, Utc(i.PaidAt), Utc(i.LastRemindedAt));
+
+    // Stored as UTC. Marked as UTC so the browser shows it in the user's own time.
+    static DateTime? Utc(DateTime? d) => d is { } v ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : null;
 }

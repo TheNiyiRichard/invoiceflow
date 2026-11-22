@@ -112,6 +112,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 31 | Nov 18 | Public payment page: opens only with a signed link, marks invoices Viewed |
 | 32 | Nov 19 | Card payments with Stripe (test mode): server-side amount, one payment per invoice |
 | 33 | Nov 20 | Verified Stripe webhook: signature, replay and amount checks before marking Paid |
+| 34 | Nov 21 | Payment receipts and invoice reminders (one per invoice per day) |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

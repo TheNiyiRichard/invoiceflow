@@ -14,19 +14,21 @@ namespace Invoiceflow.Api.Tests;
 [Collection("api")]
 public class StripeWebhookTests(ApiFactory factory)
 {
-    record Started(HttpClient Owner, Guid InvoiceId, string Token, string IntentId, long Cents);
+    record Started(HttpClient Owner, Guid InvoiceId, string Token, string IntentId, long Cents, string ClientEmail);
 
-    // A sent invoice whose client has opened the card form, so a payment exists at "Stripe"
-    async Task<Started> PaymentStarted()
+    // A sent invoice whose client has opened the card form, so a payment exists at "Stripe".
+    // Its own client address, so each test only sees its own receipts.
+    async Task<Started> PaymentStarted(string domain = "example.com")
     {
         var a = await factory.SignedInUser("a");
-        var client = await a.AddClient();
+        var email = $"{Guid.NewGuid():N}@{domain}";
+        var client = await a.AddClient("Test client", email);
         var invoice = await a.AddInvoice(client.Id); // 315.00
         await factory.SetStatus(invoice.Id, InvoiceStatus.Sent);
         var token = factory.Services.GetRequiredService<PaymentLinks>().Create(invoice.Id, DateTimeOffset.UtcNow.AddDays(30));
         Assert.Equal(HttpStatusCode.OK, (await factory.NewBrowser().PostAsync($"/api/pay/{token}/intent", null)).StatusCode);
         var intent = factory.Payments.For(invoice.Id).Single();
-        return new Started(a, invoice.Id, token, intent.Id, intent.Request.AmountCents);
+        return new Started(a, invoice.Id, token, intent.Id, intent.Request.AmountCents, email);
     }
 
     static string Succeeded(string intentId, Guid invoiceId, long cents, string currency = "cad") => JsonSerializer.Serialize(new
@@ -79,9 +81,15 @@ public class StripeWebhookTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
         Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
 
+        // The client gets one receipt, with the paid PDF attached
+        var receipt = Assert.Single(factory.Mailbox.To(p.ClientEmail));
+        Assert.StartsWith("Receipt", receipt.Subject);
+        Assert.Single(receipt.Attachments);
+
         // Stripe sometimes delivers the same event twice: still 200, nothing changes
         Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
         Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
+        Assert.Single(factory.Mailbox.To(p.ClientEmail)); // a repeat never sends a second receipt
 
         // The client's page says Paid, and the card form can't start again
         var page = await factory.NewBrowser().GetFromJsonAsync<PaymentPageDto>($"/api/pay/{p.Token}");
@@ -109,6 +117,7 @@ public class StripeWebhookTests(ApiFactory factory)
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Equal("Sent", await p.Owner.StatusOf(p.InvoiceId));
+        Assert.Empty(factory.Mailbox.To(p.ClientEmail));
     }
 
     [Theory]
@@ -128,5 +137,16 @@ public class StripeWebhookTests(ApiFactory factory)
         // Signed properly, so Stripe gets its 200 and stops retrying. But the invoice isn't paid.
         Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
         Assert.Equal("Sent", await p.Owner.StatusOf(p.InvoiceId));
+        Assert.Empty(factory.Mailbox.To(p.ClientEmail));
+    }
+
+    [Fact]
+    public async Task A_failed_receipt_never_undoes_the_payment()
+    {
+        var p = await PaymentStarted("fail.test"); // the receipt email will fail
+        var json = Succeeded(p.IntentId, p.InvoiceId, p.Cents);
+
+        Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
+        Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
     }
 }

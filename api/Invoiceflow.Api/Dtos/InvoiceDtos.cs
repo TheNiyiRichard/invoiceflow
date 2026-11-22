@@ -8,7 +8,8 @@ public record InvoiceDto(
     Guid Id, string Number, Guid ClientId, string ClientName, string Status,
     DateOnly IssueDate, DateOnly DueDate, string? Notes,
     decimal Subtotal, decimal TaxRate, decimal Tax, decimal Total,
-    List<LineItemDto> LineItems, DateTime CreatedAt, DateTime UpdatedAt);
+    List<LineItemDto> LineItems, DateTime CreatedAt, DateTime UpdatedAt,
+    DateTime? PaidAt, DateTime? LastRemindedAt);
 
 public record InvoiceSummaryDto(Guid Id, string Number, Guid ClientId, string ClientName, string Status, DateOnly IssueDate, DateOnly DueDate, decimal Total);
 

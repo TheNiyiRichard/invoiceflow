@@ -99,7 +99,7 @@ function Received({ processing }) {
     <>
       <CheckCircle size={28} weight="fill" className="pay-paid-icon" />
       <h2 id="pay-card-title" className="pay-card-title">{processing ? 'Payment processing' : 'Payment received'}</h2>
-      <p className="pay-card-text">Thank you. The invoice will show as paid shortly.</p>
+      <p className="pay-card-text">Thank you. A receipt is on its way to your inbox, and the invoice will show as paid shortly.</p>
     </>
   )
 }

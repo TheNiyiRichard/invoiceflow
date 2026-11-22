@@ -29,6 +29,8 @@ public class Invoice
     public DateTime? PaidAt { get; set; }
     // The Stripe payment for this invoice (a PaymentIntent id). One per invoice, so it can't be paid twice.
     public string? StripePaymentIntentId { get; set; }
+    // When the last reminder email went out (UTC). One per invoice per day.
+    public DateTime? LastRemindedAt { get; set; }
     public List<LineItem> LineItems { get; set; } = [];
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

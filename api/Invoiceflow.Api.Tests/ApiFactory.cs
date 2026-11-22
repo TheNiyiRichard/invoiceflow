@@ -118,6 +118,15 @@ public class ApiFactory : WebApplicationFactory<Program>
         await db.SaveChangesAsync();
     }
 
+    // As if the last reminder went out at this time
+    public async Task SetLastReminded(Guid invoiceId, DateTime at)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Invoices.IgnoreQueryFilters().Where(i => i.Id == invoiceId)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.LastRemindedAt, (DateTime?)at));
+    }
+
      // Runs the overdue check once, as if it were this moment
     public async Task<int> RunOverdueJob(DateTimeOffset now)
     {

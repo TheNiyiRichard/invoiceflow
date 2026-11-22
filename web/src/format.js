@@ -74,3 +74,8 @@ export const todayLong = () => new Intl.DateTimeFormat('en-US', { weekday: 'long
 
 // The browser's time zone, e.g. "America/Toronto"
 export const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
+
+// A moment from the API (UTC) in the user's own time: "Nov 21, 3:42 p.m."
+export function formatWhen(iso) {
+  return new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
+}
