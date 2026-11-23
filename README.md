@@ -113,6 +113,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 32 | Nov 19 | Card payments with Stripe (test mode): server-side amount, one payment per invoice |
 | 33 | Nov 20 | Verified Stripe webhook: signature, replay and amount checks before marking Paid |
 | 34 | Nov 21 | Payment receipts and invoice reminders (one per invoice per day) |
+| 35 | Nov 22 | Week 5 review: webhook payments confirmed with Stripe, tampered-link tests on every pay route |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
