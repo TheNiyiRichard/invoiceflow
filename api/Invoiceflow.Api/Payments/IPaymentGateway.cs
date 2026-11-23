@@ -1,7 +1,7 @@
 namespace Invoiceflow.Api.Payments;
 
 // One card payment at Stripe (a PaymentIntent). Status is Stripe's: requires_payment_method, processing, succeeded, canceled…
-public record CardPayment(string Id, string ClientSecret, string Status);
+public record CardPayment(string Id, string ClientSecret, string Status, long AmountReceived, string Currency);
 
 public record CardPaymentRequest(Guid InvoiceId, long AmountCents, string Currency, string Description);
 

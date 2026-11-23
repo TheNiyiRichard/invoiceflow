@@ -39,7 +39,7 @@ public class StripeGateway(IOptions<StripeSettings> options) : IPaymentGateway
     public async Task<CardPayment> GetAsync(string id, CancellationToken ct = default) =>
         From(await Service().GetAsync(id, cancellationToken: ct));
 
-    static CardPayment From(PaymentIntent p) => new(p.Id, p.ClientSecret, p.Status);
+    static CardPayment From(PaymentIntent p) => new(p.Id, p.ClientSecret, p.Status, p.AmountReceived, p.Currency);
 
     PaymentIntentService Service() => new(client ??= new StripeClient(Settings().SecretKey));
 

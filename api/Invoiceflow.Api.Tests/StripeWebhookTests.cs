@@ -17,8 +17,9 @@ public class StripeWebhookTests(ApiFactory factory)
     record Started(HttpClient Owner, Guid InvoiceId, string Token, string IntentId, long Cents, string ClientEmail);
 
     // A sent invoice whose client has opened the card form, so a payment exists at "Stripe".
+    // clientPaid: the card went through, so Stripe's own record says succeeded.
     // Its own client address, so each test only sees its own receipts.
-    async Task<Started> PaymentStarted(string domain = "example.com")
+    async Task<Started> PaymentStarted(string domain = "example.com", bool clientPaid = true)
     {
         var a = await factory.SignedInUser("a");
         var email = $"{Guid.NewGuid():N}@{domain}";
@@ -28,31 +29,33 @@ public class StripeWebhookTests(ApiFactory factory)
         var token = factory.Services.GetRequiredService<PaymentLinks>().Create(invoice.Id, DateTimeOffset.UtcNow.AddDays(30));
         Assert.Equal(HttpStatusCode.OK, (await factory.NewBrowser().PostAsync($"/api/pay/{token}/intent", null)).StatusCode);
         var intent = factory.Payments.For(invoice.Id).Single();
+        if (clientPaid) factory.Payments.Succeed(intent.Id);
         return new Started(a, invoice.Id, token, intent.Id, intent.Request.AmountCents, email);
     }
 
-    static string Succeeded(string intentId, Guid invoiceId, long cents, string currency = "cad") => JsonSerializer.Serialize(new
-    {
-        id = $"evt_test_{Guid.NewGuid():N}",
-        @object = "event",
-        api_version = "2025-01-27.acacia",
-        created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-        livemode = false,
-        type = "payment_intent.succeeded",
-        data = new
+    static string Succeeded(string intentId, Guid invoiceId, long cents, string currency = "cad", string apiVersion = "2025-01-27.acacia") =>
+        JsonSerializer.Serialize(new
         {
-            @object = new
+            id = $"evt_test_{Guid.NewGuid():N}",
+            @object = "event",
+            api_version = apiVersion,
+            created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            livemode = false,
+            type = "payment_intent.succeeded",
+            data = new
             {
-                id = intentId,
-                @object = "payment_intent",
-                amount = cents,
-                amount_received = cents,
-                currency,
-                status = "succeeded",
-                metadata = new { invoice_id = invoiceId.ToString() },
+                @object = new
+                {
+                    id = intentId,
+                    @object = "payment_intent",
+                    amount = cents,
+                    amount_received = cents,
+                    currency,
+                    status = "succeeded",
+                    metadata = new { invoice_id = invoiceId.ToString() },
+                },
             },
-        },
-    });
+        });
 
     // Stripe's scheme: "t=<unix time>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the endpoint's secret>"
     static string Sign(string json, string secret, DateTimeOffset? at = null)
@@ -145,6 +148,49 @@ public class StripeWebhookTests(ApiFactory factory)
     {
         var p = await PaymentStarted("fail.test"); // the receipt email will fail
         var json = Succeeded(p.IntentId, p.InvoiceId, p.Cents);
+
+        Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
+        Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
+    }
+
+    [Fact]
+    public async Task A_leaked_webhook_secret_still_cannot_fake_a_payment()
+    {
+        // The client opened the card form but never paid. Someone holding the real webhook secret signs "succeeded" anyway.
+        var p = await PaymentStarted(clientPaid: false);
+        var json = Succeeded(p.IntentId, p.InvoiceId, p.Cents);
+
+        Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
+        Assert.Equal("Sent", await p.Owner.StatusOf(p.InvoiceId)); // Stripe's own record says it isn't paid
+        Assert.Empty(factory.Mailbox.To(p.ClientEmail));
+    }
+
+    [Fact]
+    public async Task If_Stripe_cannot_be_reached_the_event_is_retried_later()
+    {
+        var p = await PaymentStarted();
+        var intent = factory.Payments.For(p.InvoiceId).Single();
+        var json = Succeeded(p.IntentId, p.InvoiceId, p.Cents);
+
+        intent.Unreachable = true;
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
+        Assert.Equal("Sent", await p.Owner.StatusOf(p.InvoiceId));
+
+        intent.Unreachable = false; // Stripe is back, and sends the same event again
+        Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
+        Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
+    }
+
+    [Fact]
+    public async Task An_event_from_an_older_api_version_still_counts()
+    {
+        // ConstructEvent would refuse this by default. We pass false on purpose: the Stripe CLI and the account's
+        // endpoint can send a different version than the library's pin, and every payment would get a 400.
+        const string older = "2020-08-27";
+        Assert.NotEqual(older, Stripe.StripeConfiguration.ApiVersion);
+
+        var p = await PaymentStarted();
+        var json = Succeeded(p.IntentId, p.InvoiceId, p.Cents, apiVersion: older);
 
         Assert.Equal(HttpStatusCode.OK, (await Deliver(json, Sign(json, factory.WebhookSecret))).StatusCode);
         Assert.Equal("Paid", await p.Owner.StatusOf(p.InvoiceId));
