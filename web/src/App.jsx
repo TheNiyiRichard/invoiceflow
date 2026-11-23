@@ -24,7 +24,7 @@ export default function App() {
               <Route path="/invoices/new" element={<InvoiceEditor />} />
               <Route path="/invoices/:id" element={<InvoiceEditor />} />
               <Route path="/clients" element={<Clients />} />
-              <Route path="/payments" element={<ComingSoon title="Payments" when="Week 5">Card payments through Stripe, in test mode.</ComingSoon>} />
+              <Route path="/payments" element={<ComingSoon title="Payments" when="Week 6">Every card payment your clients make, with its date and Stripe reference.</ComingSoon>} />
               <Route path="/security" element={<ComingSoon title="Security" when="Week 6">Two-factor sign-in, recovery codes and your signed-in devices.</ComingSoon>} />
             </Route>
           </Route>
