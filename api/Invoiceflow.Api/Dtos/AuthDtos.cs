@@ -27,4 +27,13 @@ public class LoginInput
     public string Password { get; set; } = "";
 }
 
-public record MeDto(string Email, string FullName, string? BusinessName);
+public record MeDto(string Email, string FullName, string? BusinessName, bool EmailConfirmed);
+
+public class VerifyEmailInput
+{
+    [Required, StringLength(64)]
+    public string UserId { get; set; } = "";
+
+    [Required, StringLength(1024)]
+    public string Code { get; set; } = "";
+}

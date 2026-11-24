@@ -45,7 +45,7 @@ export default function SignIn() {
       <h1 className="auth-title">Sign in</h1>
       <p className="auth-lede">Use the email and password for your Invoiceflow account.</p>
 
-      {state?.registered && !error && <p className="notice notice--ok" role="status">Account created. Sign in to continue.</p>}
+      {state?.registered && !error && <p className="notice notice--ok" role="status">Account created. We’ve emailed a link to verify {state.email}. Sign in to continue.</p>}
       {error && <p className="notice notice--error" role="alert">{error}</p>}
 
       <form className="auth-fields" onSubmit={handleSubmit}>

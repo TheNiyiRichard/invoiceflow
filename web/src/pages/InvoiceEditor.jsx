@@ -24,10 +24,12 @@ const PROBLEMS = {
 const SEND_ERRORS = {
   429: 'You’ve sent a lot of invoices in the last hour. Try again later.',
   502: 'Couldn’t send the email, so nothing went out. It’s still a draft: try again in a moment.',
+  403: 'Verify your email first: use the link we sent you, or “Resend email” at the top of the page.',
 }
 const REMIND_ERRORS = {
   429: 'You’ve sent a lot of emails in the last hour. Try again later.',
   502: 'Couldn’t send the reminder, so nothing went out. Try again in a moment.',
+  403: 'Verify your email first: use the link we sent you, or “Resend email” at the top of the page.',
 }
 
 const newLine = () => ({ key: crypto.randomUUID(), description: '', quantity: '1', unitPrice: '' })

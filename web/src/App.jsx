@@ -10,6 +10,7 @@ import ComingSoon from './pages/ComingSoon.jsx'
 import SignIn from './pages/SignIn.jsx'
 import Register from './pages/Register.jsx'
 import PayPage from './pages/PayPage.jsx'
+import VerifyEmail from './pages/VerifyEmail.jsx'
 
 export default function App() {
   return (
@@ -34,6 +35,8 @@ export default function App() {
           </Route>
           {/* Public: no sign-in, only a signed link. Outside both guards on purpose. */}
           <Route path="/pay/:token" element={<PayPage />} />
+          {/* Works signed in or out: the link in the email is the proof */}
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

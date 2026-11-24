@@ -103,10 +103,10 @@ public static class InvoiceEmail
             Attachments = [new EmailAttachment($"{InvoiceMath.FormatNumber(invoice.Number)}.pdf", "application/pdf", pdf)],
         };
 
-    static string P(string html) => $"""<p style="margin:0 0 16px;font-size:15px;line-height:1.5">{html}</p>""";
+    internal static string P(string html) => $"""<p style="margin:0 0 16px;font-size:15px;line-height:1.5">{html}</p>""";
 
     // The shared layout. Everything passed in is already encoded.
-    static string Page(string from, string heading, string body, string? buttonUrl, string? buttonText, string footnote)
+    internal static string Page(string from, string heading, string body, string? buttonUrl, string? buttonText, string footnote)
     {
         var button = buttonUrl is null ? "" :
             $"""<a href="{H(buttonUrl)}" style="display:inline-block;margin-top:8px;padding:12px 20px;border-radius:8px;background:#151A17;color:#FFFEFB;font-size:15px;text-decoration:none">{buttonText}</a>""";
@@ -128,8 +128,8 @@ public static class InvoiceEmail
             """;
     }
 
-    static string H(string s) => WebUtility.HtmlEncode(s);
+    internal static string H(string s) => WebUtility.HtmlEncode(s);
 
     // Names also go into email headers (subject, display names), where a line break could start a new header
-    static string OneLine(string s) => string.Concat(s.Select(c => char.IsControl(c) ? ' ' : c)).Trim();
+    internal static string OneLine(string s) => string.Concat(s.Select(c => char.IsControl(c) ? ' ' : c)).Trim();
 }

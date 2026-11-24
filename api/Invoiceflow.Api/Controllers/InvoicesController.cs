@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Invoiceflow.Api.Controllers;
 
@@ -87,6 +88,8 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
         return new PaymentLinkDto(url, expiresAt);
     }
 
+
+    [Authorize(Policy = VerifiedEmailRequirement.Policy)]
     // POST /api/invoices/{id}/send: emails the client the PDF and a signed payment link. From then on it's locked.
     // Limited per user, so nobody can use Invoiceflow to spam people.
     [HttpPost("{id:guid}/send")]
@@ -131,6 +134,8 @@ public class InvoicesController(AppDbContext db, CurrentUser currentUser, Paymen
 
     static readonly TimeSpan ReminderCooldown = TimeSpan.FromHours(24);
 
+
+    [Authorize(Policy = VerifiedEmailRequirement.Policy)]
     // POST /api/invoices/{id}/remind: emails the client again, with the PDF and a freshly signed 30-day link.
     // One per invoice per day, on top of the per-user send limit, so nobody can flood a client's inbox.
     [HttpPost("{id:guid}/remind")]

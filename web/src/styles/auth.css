@@ -66,3 +66,6 @@
   .auth-brand { display: none; }
   .auth-main { padding: 24px 20px; }
 }
+
+/* A link styled as the main button (verify email page) */
+.auth-form > a.btn-primary { margin-top: 28px; text-decoration: none; }

@@ -4,6 +4,7 @@ import { CreditCard, List, LockSimple, Receipt, ShieldCheck, SignOut, SquaresFou
 import { useAuth } from '../auth/AuthContext.js'
 import { initials } from '../format.js'
 import '../styles/app.css'
+import VerifyBanner from './VerifyBanner.jsx'
 
 // The whole menu in one place. Adding a page = one line here + one route in App.jsx.
 const sections = [
@@ -84,7 +85,10 @@ export default function AppLayout() {
           <p className="topbar-title">{title}</p>
           <span className="session-pill" title="HttpOnly cookie over HTTPS, ends after 8 hours"><LockSimple size={14} />Secure session</span>
         </header>
-        <main id="content" className="content" tabIndex={-1}><Outlet /></main>
+        <main id="content" className="content" tabIndex={-1}>
+          {user && !user.emailConfirmed && <VerifyBanner email={user.email} />}
+          <Outlet />
+        </main>
       </div>
     </div>
   )

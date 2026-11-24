@@ -36,9 +36,13 @@ builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
 
-// Secure by default: every endpoint needs a signed-in user unless it's marked [AllowAnonymous]
 builder.Services.AddAuthorization(o =>
-    o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+{
+    o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    // Emailing someone else (invoices, reminders) also needs a verified email address
+    o.AddPolicy(VerifiedEmailRequirement.Policy, p => p.RequireAuthenticatedUser().AddRequirements(new VerifiedEmailRequirement()));
+});
+builder.Services.AddScoped<IAuthorizationHandler, VerifiedEmailHandler>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(o =>
 {
@@ -56,7 +60,11 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
 })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddPasswordValidator<CommonPasswordValidator>()
-    .AddSignInManager();
+    .AddSignInManager()
+    .AddDefaultTokenProviders(); // signed, expiring links for email verification
+
+// Verification links work for 24 hours. Each one is tied to its account, so it can't verify anyone else.
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(AccountEmail.LinkHours));
 
 builder.Services.ConfigureApplicationCookie(o =>
 {

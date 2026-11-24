@@ -22,6 +22,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - [ ] Two-factor sign-in (TOTP) with recovery codes
 - [x] Signed, expiring payment links (HMAC-SHA256)
 - [x] Verified Stripe webhooks
+- [x] Email verification before an account can send invoices
 - [ ] Tamper-evident audit log
 - [ ] Role-based access (Owner, Accountant, Viewer)
 - [ ] Encryption of sensitive fields at rest
@@ -114,6 +115,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 33 | Nov 20 | Verified Stripe webhook: signature, replay and amount checks before marking Paid |
 | 34 | Nov 21 | Payment receipts and invoice reminders (one per invoice per day) |
 | 35 | Nov 22 | Week 5 review: webhook payments confirmed with Stripe, tampered-link tests on every pay route |
+| 36 | Nov 23 | Email verification: signed 24-hour links; unverified accounts can't email anyone |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

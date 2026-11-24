@@ -89,3 +89,11 @@
   .skeleton-row > :nth-child(3), .skeleton-row > :nth-child(4) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* Email not verified yet */
+.verify-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 24px; padding: 12px 16px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); background: var(--color-surface); font-size: 14px; line-height: 1.45; color: var(--color-ink-2); }
+.verify-banner svg { flex: none; color: var(--color-warning); }
+.verify-banner p { flex: 1; min-width: 220px; }
+.verify-banner strong { font-weight: 500; color: var(--color-ink); }
+.verify-banner button { padding: 0; border: 0; background: none; font: inherit; font-weight: 500; color: var(--color-green); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.verify-banner button:disabled { opacity: .6; cursor: progress; }

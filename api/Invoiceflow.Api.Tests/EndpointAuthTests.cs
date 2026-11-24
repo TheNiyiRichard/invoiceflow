@@ -15,6 +15,7 @@ public class EndpointAuthTests(ApiFactory factory)
     [
         "POST /api/auth/register",
         "POST /api/auth/login",
+        "POST /api/auth/verify-email",
         "GET /api/health",
         "GET /api/health/db",
         "GET /api/health/jobs",

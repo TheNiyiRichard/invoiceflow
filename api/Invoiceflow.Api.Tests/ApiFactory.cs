@@ -13,6 +13,7 @@ using Invoiceflow.Api.Mail;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Invoiceflow.Api.Payments;
+using System.Text.RegularExpressions;
 
 namespace Invoiceflow.Api.Tests;
 
@@ -80,22 +81,42 @@ public class ApiFactory : WebApplicationFactory<Program>
     });
 
     // One signed-in browser per tag ("a", "b"), shared by every test. New users in every
-    // test would run into the 10-a-minute sign-in limit, which all tests share.
+    // test would run into the sign-in limit, which all tests share.
     public async Task<HttpClient> SignedInUser(string tag)
     {
         if (users.TryGetValue(tag, out var existing)) return existing;
+        var (browser, _) = await NewAccount(tag);
+        users[tag] = browser;
+        return browser;
+    }
 
+    // A brand-new account, signed in. Verified the real way (the link from the email) unless a test needs it unverified.
+    public async Task<(HttpClient Browser, string Email)> NewAccount(string tag, bool verified = true)
+    {
         var browser = NewBrowser();
         var email = $"{tag}-{Guid.NewGuid():N}@example.com";
 
         var register = await browser.PostAsJsonAsync("/api/auth/register", new { fullName = $"Tester {tag}", email, password = Password });
         Assert.Equal(HttpStatusCode.Created, register.StatusCode);
 
+        if (verified)
+        {
+            var (userId, code) = VerificationLink(Assert.Single(Mailbox.To(email)));
+            var verify = await browser.PostAsJsonAsync("/api/auth/verify-email", new { userId, code });
+            Assert.Equal(HttpStatusCode.NoContent, verify.StatusCode);
+        }
+
         var login = await browser.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
         Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
+        return (browser, email);
+    }
 
-        users[tag] = browser;
-        return browser;
+    // The account id and code from a verification email's link
+    public static (string UserId, string Code) VerificationLink(EmailMessage mail)
+    {
+        var m = Regex.Match(mail.Text, @"/verify-email\?user=([^&\s]+)&code=([A-Za-z0-9_-]+)");
+        Assert.True(m.Success, "No verification link in the email");
+        return (Uri.UnescapeDataString(m.Groups[1].Value), m.Groups[2].Value);
     }
 
     // Jumps an invoice straight to a status, skipping email and payment, for tests that don't care how it got there
