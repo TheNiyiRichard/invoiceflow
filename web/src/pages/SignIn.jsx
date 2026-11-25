@@ -46,6 +46,7 @@ export default function SignIn() {
       <p className="auth-lede">Use the email and password for your Invoiceflow account.</p>
 
       {state?.registered && !error && <p className="notice notice--ok" role="status">Account created. We’ve emailed a link to verify {state.email}. Sign in to continue.</p>}
+      {state?.reset && !error && <p className="notice notice--ok" role="status">Password changed. Sign in with your new password.</p>}
       {error && <p className="notice notice--error" role="alert">{error}</p>}
 
       <form className="auth-fields" onSubmit={handleSubmit}>
@@ -55,6 +56,7 @@ export default function SignIn() {
             autoComplete="email" autoCapitalize="none" spellCheck={false} maxLength={254} required />
         </div>
         <PasswordField id="password" label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
+        <Link className="auth-forgot" to="/forgot-password" state={{ email }}>Forgot password?</Link>
         <button className="btn-primary" type="submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}<ArrowRight size={16} />
         </button>

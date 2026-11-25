@@ -57,22 +57,13 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<IActionResult> VerifyEmail(VerifyEmailInput input)
     {
         var user = await users.FindByIdAsync(input.UserId);
-        if (user is null) return Problem(statusCode: StatusCodes.Status400BadRequest, title: BadLink);
+        if (user is null) return InvalidLink();
         if (user.EmailConfirmed) return NoContent(); // an old link clicked again: already done
-
-        string token;
-        try
-        {
-            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(input.Code));
-        }
-        catch (FormatException)
-        {
-            return Problem(statusCode: StatusCodes.Status400BadRequest, title: BadLink);
-        }
+        if (Decode(input.Code) is not { } token) return InvalidLink();
 
         // Identity checks it's signed, unexpired and made for this exact account
         var result = await users.ConfirmEmailAsync(user, token);
-        return result.Succeeded ? NoContent() : Problem(statusCode: StatusCodes.Status400BadRequest, title: BadLink);
+        return result.Succeeded ? NoContent() : InvalidLink();
     }
 
     // POST /api/auth/resend-verification: a fresh link, from the banner. Shares the per-user email limit.
@@ -87,6 +78,44 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
         return await SendVerification(user)
             ? NoContent()
             : Problem(statusCode: StatusCodes.Status502BadGateway, title: "Couldn't send the email. Try again in a moment.");
+    }
+
+    // POST /api/auth/forgot-password: always the same empty 204, whether or not the account exists,
+    // so this can't be used to find out who has an Invoiceflow account
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordInput input)
+    {
+        var user = await users.FindByEmailAsync(input.Email.Trim());
+        if (user is not null) await SendReset(user);
+        return NoContent();
+    }
+
+    // POST /api/auth/reset-password: the page the reset email links to posts here
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordInput input)
+    {
+        var user = await users.FindByIdAsync(input.UserId);
+        if (user is null || Decode(input.Code) is not { } token) return InvalidLink();
+
+        // Identity checks the link first (signed, under an hour old, for this account), then the new password's rules.
+        // A new password also changes the account's security stamp. That makes this link (and any other
+        // outstanding one) stop working, and signs out every browser that was signed in.
+        var result = await users.ResetPasswordAsync(user, token, input.Password);
+        if (!result.Succeeded)
+        {
+            var passwordErrors = result.Errors.Where(e => e.Code.StartsWith("Password")).ToList();
+            if (passwordErrors.Count == 0) return InvalidLink();
+            foreach (var e in passwordErrors) ModelState.AddModelError(nameof(input.Password), e.Description);
+            return ValidationProblem(ModelState);
+        }
+
+        await signIn.SignOutAsync(); // this browser too: everyone signs in again with the new password
+        logger.LogInformation("Password reset for user {UserId}", user.Id);
+        return NoContent();
     }
 
     [AllowAnonymous]
@@ -118,15 +147,13 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
         return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName, user.BusinessName, user.EmailConfirmed);
     }
 
-    // The link carries a signed token made for this account. It's never logged.
+    // Links carry a signed token made for this account. They're never logged.
     async Task<bool> SendVerification(ApplicationUser user)
     {
         try
         {
             var token = await users.GenerateEmailConfirmationTokenAsync(user);
-            var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token)); // URL-safe, no + / =
-            var link = $"{config["App:WebUrl"]}/verify-email?user={Uri.EscapeDataString(user.Id)}&code={code}";
-            await mailer.SendAsync(AccountEmail.Verify(user, link));
+            await mailer.SendAsync(AccountEmail.Verify(user, AccountLink("verify-email", user, token)));
             return true;
         }
         catch (Exception ex)
@@ -135,4 +162,29 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
             return false;
         }
     }
+
+    async Task SendReset(ApplicationUser user)
+    {
+        try
+        {
+            var token = await users.GeneratePasswordResetTokenAsync(user);
+            await mailer.SendAsync(AccountEmail.Reset(user, AccountLink("reset-password", user, token)));
+        }
+        catch (Exception ex)
+        {
+            // Logged, never shown: the reply has to be the same either way
+            logger.LogError(ex, "Password reset email for user {UserId} wasn't sent", user.Id);
+        }
+    }
+
+    string AccountLink(string page, ApplicationUser user, string token) =>
+        $"{config["App:WebUrl"]}/{page}?user={Uri.EscapeDataString(user.Id)}&code={WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token))}";
+
+    static string? Decode(string code)
+    {
+        try { return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code)); }
+        catch (FormatException) { return null; }
+    }
+
+    IActionResult InvalidLink() => Problem(statusCode: StatusCodes.Status400BadRequest, title: BadLink);
 }

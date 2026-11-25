@@ -37,3 +37,22 @@ public class VerifyEmailInput
     [Required, StringLength(1024)]
     public string Code { get; set; } = "";
 }
+
+public class ForgotPasswordInput
+{
+    [Required(ErrorMessage = "Enter your email."), EmailAddress(ErrorMessage = "Enter a valid email address."), StringLength(254)]
+    public string Email { get; set; } = "";
+}
+
+public class ResetPasswordInput
+{
+    [Required, StringLength(64)]
+    public string UserId { get; set; } = "";
+
+    [Required, StringLength(1024)]
+    public string Code { get; set; } = "";
+
+    // Same rules as sign-up (Identity checks them). The 128 cap stops huge strings being hashed.
+    [Required(ErrorMessage = "Enter a new password."), StringLength(128)]
+    public string Password { get; set; } = "";
+}

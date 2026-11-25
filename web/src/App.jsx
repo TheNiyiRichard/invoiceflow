@@ -11,6 +11,8 @@ import SignIn from './pages/SignIn.jsx'
 import Register from './pages/Register.jsx'
 import PayPage from './pages/PayPage.jsx'
 import VerifyEmail from './pages/VerifyEmail.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 
 export default function App() {
   return (
@@ -32,11 +34,13 @@ export default function App() {
           <Route element={<GuestRoute />}>
             <Route path="/sign-in" element={<SignIn />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
           {/* Public: no sign-in, only a signed link. Outside both guards on purpose. */}
           <Route path="/pay/:token" element={<PayPage />} />
           {/* Works signed in or out: the link in the email is the proof */}
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

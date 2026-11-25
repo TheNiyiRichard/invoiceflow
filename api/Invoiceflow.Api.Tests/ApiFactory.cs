@@ -25,7 +25,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         Environment.GetEnvironmentVariable("INVOICEFLOW_TEST_DB")
         ?? "Server=localhost;Database=InvoiceflowTest;Trusted_Connection=True;TrustServerCertificate=True";
 
-    const string Password = "copper lantern harbour drift";
+    public const string Password = "copper lantern harbour drift";
     readonly Dictionary<string, HttpClient> users = [];
     // Every email the API "sends" during the test run
     public FakeMailer Mailbox { get; } = new();
@@ -40,8 +40,10 @@ public class ApiFactory : WebApplicationFactory<Program>
         // "Testing", not "Development": no user-secrets (so no dev connection string) and no Swagger
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
-        // All test classes share one sign-in limiter. The real app keeps 10 a minute.
-        builder.UseSetting("RateLimits:AuthPerMinute", "100");
+        // All test classes share one sign-in limiter, and Week 6 signs in a lot. The real app keeps 10 a minute.
+        builder.UseSetting("RateLimits:AuthPerMinute", "300");
+        // Re-check sessions on every request, so tests can see a reset sign everyone out straight away
+        builder.UseSetting("Auth:SessionRecheckSeconds", "0");
         // A fresh signing key every run. Tests never see the real one.
         builder.UseSetting("PaymentLinks:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("RateLimits:SendPerHour", "100");
@@ -111,11 +113,14 @@ public class ApiFactory : WebApplicationFactory<Program>
         return (browser, email);
     }
 
-    // The account id and code from a verification email's link
-    public static (string UserId, string Code) VerificationLink(EmailMessage mail)
+    // The account id and code from a link in an account email
+    public static (string UserId, string Code) VerificationLink(EmailMessage mail) => AccountLink(mail, "verify-email");
+    public static (string UserId, string Code) ResetLink(EmailMessage mail) => AccountLink(mail, "reset-password");
+
+    static (string UserId, string Code) AccountLink(EmailMessage mail, string page)
     {
-        var m = Regex.Match(mail.Text, @"/verify-email\?user=([^&\s]+)&code=([A-Za-z0-9_-]+)");
-        Assert.True(m.Success, "No verification link in the email");
+        var m = Regex.Match(mail.Text, $@"/{page}\?user=([^&\s]+)&code=([A-Za-z0-9_-]+)");
+        Assert.True(m.Success, $"No /{page} link in the email");
         return (Uri.UnescapeDataString(m.Groups[1].Value), m.Groups[2].Value);
     }
 

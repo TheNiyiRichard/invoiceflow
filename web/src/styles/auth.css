@@ -69,3 +69,7 @@
 
 /* A link styled as the main button (verify email page) */
 .auth-form > a.btn-primary { margin-top: 28px; text-decoration: none; }
+
+/* "Forgot password?" under the password field */
+.auth-forgot { align-self: flex-end; margin-top: -10px; font-size: 13.5px; font-weight: 500; color: var(--color-green); text-decoration: none; }
+.auth-forgot:hover { text-decoration: underline; text-underline-offset: 3px; }

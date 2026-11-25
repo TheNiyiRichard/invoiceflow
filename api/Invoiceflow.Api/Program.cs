@@ -57,14 +57,22 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
     o.Lockout.AllowedForNewUsers = true;
     o.Lockout.MaxFailedAccessAttempts = 5;
     o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    // Reset links use their own provider (1 hour), not the default one (24 hours)
+    o.Tokens.PasswordResetTokenProvider = PasswordResetTokenOptions.Provider;
 })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddPasswordValidator<CommonPasswordValidator>()
     .AddSignInManager()
-    .AddDefaultTokenProviders(); // signed, expiring links for email verification
+    .AddDefaultTokenProviders() // email verification links (24 hours)
+    .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenOptions.Provider); // password reset links (1 hour)
 
 // Verification links work for 24 hours. Each one is tied to its account, so it can't verify anyone else.
 builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(AccountEmail.LinkHours));
+
+// Each signed-in browser re-checks its account once a minute. A password reset changes the account's
+// security stamp, so every old session is signed out within a minute. (Tests re-check on every request.)
+builder.Services.Configure<SecurityStampValidatorOptions>(o =>
+    o.ValidationInterval = TimeSpan.FromSeconds(builder.Configuration.GetValue("Auth:SessionRecheckSeconds", 60)));
 
 builder.Services.ConfigureApplicationCookie(o =>
 {

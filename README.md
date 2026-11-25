@@ -27,6 +27,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 - [ ] Role-based access (Owner, Accountant, Viewer)
 - [ ] Encryption of sensitive fields at rest
 - [ ] Security headers, CSP and rate limiting
+- [x] Password reset: single-use 1-hour links, same reply for unknown emails, signs out every session
 
 ## Project structure
 
@@ -116,6 +117,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 34 | Nov 21 | Payment receipts and invoice reminders (one per invoice per day) |
 | 35 | Nov 22 | Week 5 review: webhook payments confirmed with Stripe, tampered-link tests on every pay route |
 | 36 | Nov 23 | Email verification: signed 24-hour links; unverified accounts can't email anyone |
+| 37 | Nov 24 | Password reset: single-use 1-hour links that sign out every old session |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

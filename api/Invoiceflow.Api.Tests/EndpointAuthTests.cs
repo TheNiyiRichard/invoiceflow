@@ -23,6 +23,8 @@ public class EndpointAuthTests(ApiFactory factory)
         "POST /api/pay/{token}/viewed",
         "POST /api/pay/{token}/intent",
         "POST /api/webhooks/stripe",
+        "POST /api/auth/forgot-password",
+        "POST /api/auth/reset-password",
     ];
 
     [Fact]
