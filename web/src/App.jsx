@@ -13,6 +13,7 @@ import PayPage from './pages/PayPage.jsx'
 import VerifyEmail from './pages/VerifyEmail.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
+import Security from './pages/Security.jsx'
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
               <Route path="/invoices/:id" element={<InvoiceEditor />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/payments" element={<ComingSoon title="Payments" when="Week 6">Every card payment your clients make, with its date and Stripe reference.</ComingSoon>} />
-              <Route path="/security" element={<ComingSoon title="Security" when="Week 6">Two-factor sign-in, recovery codes and your signed-in devices.</ComingSoon>} />
+              <Route path="/security" element={<Security />} />
             </Route>
           </Route>
           <Route element={<GuestRoute />}>
