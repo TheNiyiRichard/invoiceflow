@@ -144,7 +144,7 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<ActionResult<MeDto>> Me()
     {
         var user = await users.GetUserAsync(User);
-        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName, user.BusinessName, user.EmailConfirmed);
+        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName, user.BusinessName, user.EmailConfirmed, user.TwoFactorEnabled); 
     }
 
     // Links carry a signed token made for this account. They're never logged.

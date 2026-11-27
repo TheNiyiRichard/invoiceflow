@@ -27,7 +27,7 @@ public class LoginInput
     public string Password { get; set; } = "";
 }
 
-public record MeDto(string Email, string FullName, string? BusinessName, bool EmailConfirmed);
+public record MeDto(string Email, string FullName, string? BusinessName, bool EmailConfirmed, bool TwoFactorEnabled);
 
 public class VerifyEmailInput
 {
@@ -56,3 +56,20 @@ public class ResetPasswordInput
     [Required(ErrorMessage = "Enter a new password."), StringLength(128)]
     public string Password { get; set; } = "";
 }
+
+public class TwoFactorSetupInput
+{
+    [Required(ErrorMessage = "Enter your password."), StringLength(128)]
+    public string Password { get; set; } = "";
+}
+
+public class TwoFactorCodeInput
+{
+    // 6 digits. Spaces and dashes are allowed, because apps show "123 456".
+    [Required(ErrorMessage = "Enter the 6-digit code from your app."),
+     RegularExpression(@"^[0-9 \-]{6,9}$", ErrorMessage = "Enter the 6-digit code from your app.")]
+    public string Code { get; set; } = "";
+}
+
+// The secret, shown once while setting up: as a QR code (the URI) and as text to type in
+public record TwoFactorSetupDto(string SharedKey, string AuthenticatorUri);

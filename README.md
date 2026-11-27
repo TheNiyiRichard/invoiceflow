@@ -118,6 +118,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 35 | Nov 22 | Week 5 review: webhook payments confirmed with Stripe, tampered-link tests on every pay route |
 | 36 | Nov 23 | Email verification: signed 24-hour links; unverified accounts can't email anyone |
 | 37 | Nov 24 | Password reset: single-use 1-hour links that sign out every old session |
+| 38 | Nov 25 | Two-factor setup: authenticator app QR code, password and code checks |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
