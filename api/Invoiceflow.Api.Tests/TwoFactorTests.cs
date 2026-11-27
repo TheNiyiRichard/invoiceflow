@@ -19,6 +19,8 @@ static class Totp
         var number = (BinaryPrimitives.ReadInt32BigEndian(hash.AsSpan(offset, 4)) & 0x7FFFFFFF) % 1_000_000;
         return number.ToString("D6");
     }
+    // The code the app shows next. The current one is spent once it's been used.
+    public static string Next(string key) => Code(key, DateTimeOffset.UtcNow.AddSeconds(30));
 
     static byte[] FromBase32(string key)
     {
@@ -127,12 +129,103 @@ public class TwoFactorTests(ApiFactory factory)
         await AssertFieldError(await Disable(browser, Stale(key)), "code");
         Assert.True((await Me(browser)).TwoFactorEnabled);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Disable(browser, Totp.Code(key))).StatusCode);
+        // The code that turned it on is spent, so use the next one
+        Assert.Equal(HttpStatusCode.NoContent, (await Disable(browser, Totp.Next(key))).StatusCode);
         Assert.False((await Me(browser)).TwoFactorEnabled);
 
         // Setting up again gives a new secret, so codes from the old one are useless
         var fresh = await KeyFrom(await Setup(browser));
         Assert.NotEqual(key, fresh);
         await AssertFieldError(await Enable(browser, Totp.Code(key)), "code");
+    }
+
+    const string NewPassword = "violet tram orchard snow";
+
+    static Task<HttpResponseMessage> Login(HttpClient browser, string email, string password = ApiFactory.Password) =>
+        browser.PostAsJsonAsync("/api/auth/login", new { email, password });
+
+    static Task<HttpResponseMessage> LoginCode(HttpClient browser, string code, bool trustDevice = false) =>
+        browser.PostAsJsonAsync("/api/auth/login/2fa", new { code, trustDevice });
+
+    // The password was right, so it asks for the code, but nobody is signed in yet
+    static async Task AssertCodeAsked(HttpResponseMessage res, HttpClient browser)
+    {
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.True((await res.Content.ReadFromJsonAsync<LoginStepDto>())!.TwoFactorRequired);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Signing_in_needs_the_password_then_a_code_that_works_once()
+    {
+        var (owner, email) = await factory.NewAccount("s");
+        var key = await TurnOn(owner);
+
+        var phone = factory.NewBrowser();
+        await AssertCodeAsked(await Login(phone, email), phone);
+        await AssertFieldError(await LoginCode(phone, Stale(key)), "code");
+
+        var code = Totp.Next(key);
+        Assert.Equal(HttpStatusCode.NoContent, (await LoginCode(phone, code)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await phone.GetAsync("/api/auth/me")).StatusCode);
+
+        // Someone who watched the code being typed, and knows the password, still can't use it
+        var thief = factory.NewBrowser();
+        await AssertCodeAsked(await Login(thief, email), thief);
+        await AssertFieldError(await LoginCode(thief, code), "code");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await thief.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_code_without_the_password_step_gets_nowhere()
+    {
+        var (owner, _) = await factory.NewAccount("n");
+        var key = await TurnOn(owner);
+
+        var stranger = factory.NewBrowser();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginCode(stranger, Totp.Next(key))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await stranger.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_trusted_device_skips_the_code_until_the_password_changes()
+    {
+        var (owner, email) = await factory.NewAccount("u");
+        var key = await TurnOn(owner);
+
+        var laptop = factory.NewBrowser();
+        await AssertCodeAsked(await Login(laptop, email), laptop);
+        Assert.Equal(HttpStatusCode.NoContent, (await LoginCode(laptop, Totp.Next(key), trustDevice: true)).StatusCode);
+
+        // Signing out keeps the trust: on this browser the password is enough. It's never skipped.
+        Assert.Equal(HttpStatusCode.NoContent, (await laptop.PostAsync("/api/auth/logout", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Login(laptop, email, "not the password at all")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Login(laptop, email)).StatusCode);
+
+        // Any other browser still needs a code
+        var other = factory.NewBrowser();
+        await AssertCodeAsked(await Login(other, email), other);
+
+        // A password reset forgets every trusted device
+        Assert.Equal(HttpStatusCode.NoContent, (await factory.NewBrowser().PostAsJsonAsync("/api/auth/forgot-password", new { email })).StatusCode);
+        var (userId, resetCode) = ApiFactory.ResetLink(Assert.Single(factory.Mailbox.To(email), m => m.Subject.Contains("password")));
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await factory.NewBrowser().PostAsJsonAsync("/api/auth/reset-password", new { userId, code = resetCode, password = NewPassword })).StatusCode);
+        await AssertCodeAsked(await Login(laptop, email, NewPassword), laptop);
+    }
+
+    [Fact]
+    public async Task Five_wrong_codes_lock_sign_in()
+    {
+        var (owner, email) = await factory.NewAccount("l");
+        var key = await TurnOn(owner);
+
+        var browser = factory.NewBrowser();
+        await AssertCodeAsked(await Login(browser, email), browser);
+        for (var i = 0; i < 4; i++) await AssertFieldError(await LoginCode(browser, Stale(key)), "code");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginCode(browser, Stale(key))).StatusCode); // the 5th locks it
+
+        // Locked: the right password gets the usual vague answer for the next 15 minutes
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Login(factory.NewBrowser(), email)).StatusCode);
     }
 }

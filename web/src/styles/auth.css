@@ -73,3 +73,11 @@
 /* "Forgot password?" under the password field */
 .auth-forgot { align-self: flex-end; margin-top: -10px; font-size: 13.5px; font-weight: 500; color: var(--color-green); text-decoration: none; }
 .auth-forgot:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Two-factor step */
+.auth-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--color-ink); cursor: pointer; }
+.auth-check input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--color-green); cursor: pointer; }
+.auth-check input:focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
+.auth-check-hint { display: block; font-size: 13px; color: var(--color-muted); }
+.auth-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 20px; padding: 0; border: 0; background: none; font-size: 13.5px; font-weight: 500; color: var(--color-ink-2); cursor: pointer; }
+.auth-back:hover { color: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }

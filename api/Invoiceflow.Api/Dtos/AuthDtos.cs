@@ -73,3 +73,10 @@ public class TwoFactorCodeInput
 
 // The secret, shown once while setting up: as a QR code (the URI) and as text to type in
 public record TwoFactorSetupDto(string SharedKey, string AuthenticatorUri);
+// After a correct password, when the account also needs a code. (Signed in straight away = 204, no body.)
+public record LoginStepDto(bool TwoFactorRequired);
+
+public class TwoFactorLoginInput : TwoFactorCodeInput
+{
+    public bool TrustDevice { get; set; }
+}

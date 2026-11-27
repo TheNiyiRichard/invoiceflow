@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Invoiceflow.Api.Mail;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 // QuestPDF: free Community licence (individuals and businesses under $1M a year)
@@ -59,12 +60,15 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
     o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     // Reset links use their own provider (1 hour), not the default one (24 hours)
     o.Tokens.PasswordResetTokenProvider = PasswordResetTokenOptions.Provider;
+    // Authenticator codes: each one works once, ±30 seconds
+    o.Tokens.AuthenticatorTokenProvider = OneTimeAuthenticatorTokenProvider.Provider;
 })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddPasswordValidator<CommonPasswordValidator>()
     .AddSignInManager()
     .AddDefaultTokenProviders() // email verification links (24 hours)
-    .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenOptions.Provider); // password reset links (1 hour)
+    .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenOptions.Provider) // password reset links (1 hour)
+    .AddTokenProvider<OneTimeAuthenticatorTokenProvider>(OneTimeAuthenticatorTokenProvider.Provider); // authenticator codes
 
 // Verification links work for 24 hours. Each one is tied to its account, so it can't verify anyone else.
 builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(AccountEmail.LinkHours));
@@ -85,6 +89,27 @@ builder.Services.ConfigureApplicationCookie(o =>
     // An API answers 401/403 instead of redirecting to a login page
     o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+});
+
+// "Password was right, now the code": remembers who you are for 5 minutes, and that's all it can do
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, o =>
+{
+    o.Cookie.Name = "__Host-invoiceflow-2fa";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Strict;
+    o.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+});
+// "Trust this device for 30 days": skips the code, never the password. A password reset or turning 2FA
+// off and on changes the security stamp, and every trusted device is forgotten.
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, o =>
+{
+    o.Cookie.Name = "__Host-invoiceflow-device";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Strict;
+    o.ExpireTimeSpan = TimeSpan.FromDays(30);
+    o.SlidingExpiration = false;
 });
 
 // Per IP address, per minute. Tests raise the sign-in limit, see ApiFactory.

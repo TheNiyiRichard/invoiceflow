@@ -38,7 +38,8 @@ public class TwoFactorController(UserManager<ApplicationUser> users, SignInManag
             return ValidationProblem(ModelState);
         }
 
-        // A new secret every time, so a setup abandoned earlier can never be finished by someone else
+        
+        user.LastTotpStep = null; // a new secret starts with no codes used (saved by the next line)
         await users.ResetAuthenticatorKeyAsync(user);
         await signIn.RefreshSignInAsync(user); // that renewed the account's security stamp: keep this browser signed in
         var key = (await users.GetAuthenticatorKeyAsync(user))!;
@@ -81,9 +82,9 @@ public class TwoFactorController(UserManager<ApplicationUser> users, SignInManag
         return NoContent();
     }
 
-    // Identity checks the code against the saved secret, allowing a little clock drift either way
+    // The one-time check from Auth/OneTimeAuthenticatorTokenProvider.cs, same as at sign-in
     Task<bool> ValidCode(ApplicationUser user, string code) =>
-        users.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, string.Concat(code.Where(char.IsAsciiDigit)));
+        users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, string.Concat(code.Where(char.IsAsciiDigit)));
 
     ActionResult WrongCode()
     {

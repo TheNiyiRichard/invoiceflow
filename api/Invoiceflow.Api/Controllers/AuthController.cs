@@ -124,11 +124,39 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<IActionResult> Login(LoginInput input)
     {
         var result = await signIn.PasswordSignInAsync(input.Email.Trim(), input.Password, isPersistent: false, lockoutOnFailure: true);
-        if (result.Succeeded) return NoContent();
+        if (result.Succeeded) return NoContent(); // includes a trusted device: the password was enough
+
+        // Right password, and 2FA is on: not signed in yet. Only ever said after a correct password.
+        if (result.RequiresTwoFactor) return Ok(new LoginStepDto(TwoFactorRequired: true));
 
         // Same message for wrong password, unknown email and locked account,
         // so nobody can learn which accounts exist or are locked
         return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid email or password.");
+    }
+
+    // POST /api/auth/login/2fa: the code, after the password. Public, because you're not signed in yet:
+    // the 5-minute cookie from the password step says who you are. Authenticator codes only.
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("login/2fa")]
+    public async Task<IActionResult> LoginTwoFactor(TwoFactorLoginInput input)
+    {
+        var code = string.Concat(input.Code.Where(char.IsAsciiDigit));
+        // Wrong codes count towards the same 5-strike lockout as wrong passwords
+        var result = await signIn.TwoFactorAuthenticatorSignInAsync(code, isPersistent: false, rememberClient: input.TrustDevice);
+        if (result.Succeeded) return NoContent();
+
+        if (result.IsLockedOut)
+        {
+            await signIn.SignOutAsync(); // drops the 5-minute cookie too
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Too many wrong codes. Sign-in is locked for 15 minutes.");
+        }
+        // No password step in the last 5 minutes on this browser
+        if (await signIn.GetTwoFactorAuthenticationUserAsync() is null)
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Your sign-in timed out. Enter your email and password again.");
+
+        ModelState.AddModelError(nameof(input.Code), "That code didn't work. Use the newest code in your app.");
+        return ValidationProblem(ModelState);
     }
 
     [Authorize]

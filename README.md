@@ -119,6 +119,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 36 | Nov 23 | Email verification: signed 24-hour links; unverified accounts can't email anyone |
 | 37 | Nov 24 | Password reset: single-use 1-hour links that sign out every old session |
 | 38 | Nov 25 | Two-factor setup: authenticator app QR code, password and code checks |
+| 39 | Nov 26 | Two-factor sign-in: one-time codes, 5-strike lockout, trusted devices for 30 days |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst

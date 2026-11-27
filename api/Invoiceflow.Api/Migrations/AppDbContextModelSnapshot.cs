@@ -53,6 +53,9 @@ namespace Invoiceflow.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<long?>("LastTotpStep")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
