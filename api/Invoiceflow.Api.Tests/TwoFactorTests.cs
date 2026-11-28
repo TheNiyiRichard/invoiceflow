@@ -66,7 +66,7 @@ public class TwoFactorTests(ApiFactory factory)
     static async Task<string> TurnOn(HttpClient browser)
     {
         var key = await KeyFrom(await Setup(browser));
-        Assert.Equal(HttpStatusCode.NoContent, (await Enable(browser, Totp.Code(key))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Enable(browser, Totp.Code(key))).StatusCode);
         return key;
     }
 
@@ -97,7 +97,7 @@ public class TwoFactorTests(ApiFactory factory)
         await AssertFieldError(await Enable(browser, Stale(key)), "code");
         Assert.False((await Me(browser)).TwoFactorEnabled);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Enable(browser, Totp.Code(key))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Enable(browser, Totp.Code(key))).StatusCode);
         Assert.True((await Me(browser)).TwoFactorEnabled); // and this browser is still signed in
 
         // Shown once: there's no way to read the secret again while 2FA is on

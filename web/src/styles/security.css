@@ -24,3 +24,15 @@
 @media (max-width: 520px) {
   .tfa-scan { flex-direction: column; align-items: flex-start; }
 }
+
+/* Recovery codes */
+.sec-status--low { color: var(--color-danger); }
+.rc-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-5); margin: var(--space-4) 0; padding: var(--space-4) var(--space-5); border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); background: var(--color-sheet); list-style: none; font-family: var(--font-mono); font-size: 14.5px; letter-spacing: .04em; color: var(--color-ink); user-select: all; }
+.rc-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rc-check { display: flex; align-items: center; gap: 10px; margin-top: var(--space-4); font-size: 14px; color: var(--color-ink); cursor: pointer; }
+.rc-check input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--color-green); cursor: pointer; }
+.rc-check input:focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
+
+@media (max-width: 420px) {
+  .rc-list { grid-template-columns: minmax(0, 1fr); }
+}

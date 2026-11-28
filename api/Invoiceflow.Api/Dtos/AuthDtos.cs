@@ -27,7 +27,7 @@ public class LoginInput
     public string Password { get; set; } = "";
 }
 
-public record MeDto(string Email, string FullName, string? BusinessName, bool EmailConfirmed, bool TwoFactorEnabled);
+public record MeDto(string Email, string FullName, string? BusinessName, bool EmailConfirmed, bool TwoFactorEnabled, int RecoveryCodesLeft);
 
 public class VerifyEmailInput
 {
@@ -79,4 +79,14 @@ public record LoginStepDto(bool TwoFactorRequired);
 public class TwoFactorLoginInput : TwoFactorCodeInput
 {
     public bool TrustDevice { get; set; }
+}
+
+// Shown once, right after they're made
+public record RecoveryCodesDto(IReadOnlyList<string> Codes);
+
+// A recovery code ("ABCDE-FGHJK"), or, when turning 2FA off, the 6-digit code from the app
+public class RecoveryCodeInput
+{
+    [Required(ErrorMessage = "Enter a code."), StringLength(32, ErrorMessage = "Enter a code.")]
+    public string Code { get; set; } = "";
 }

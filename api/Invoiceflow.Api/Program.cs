@@ -32,6 +32,7 @@ var webUrl = builder.Configuration["App:WebUrl"]
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<RecoveryCodes>();
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)

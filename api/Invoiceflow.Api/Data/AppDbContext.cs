@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser cu
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<LineItem> LineItems => Set<LineItem>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
 
     // Read fresh on every query, so each request only sees its own user's rows
     string? CurrentUserId => currentUser.Id;
@@ -82,6 +83,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, CurrentUser cu
 
             // Line items have no owner column, so they follow their invoice's owner
             li.HasQueryFilter(x => x.Invoice.OwnerId == CurrentUserId);
+        });
+
+        modelBuilder.Entity<RecoveryCode>(r =>
+        {
+            r.Property(x => x.Hash).HasMaxLength(200).IsRequired();
+            r.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            r.HasIndex(x => x.UserId);
         });
     }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { ArrowLeft, ArrowRight, DeviceMobile, ShieldWarning } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, DeviceMobile, Key, ShieldWarning } from '@phosphor-icons/react'
 import AuthLayout from '../components/AuthLayout.jsx'
 import PasswordField from '../components/PasswordField.jsx'
 import TextField from '../components/TextField.jsx'
@@ -13,13 +13,14 @@ const messages = {
   429: 'Too many attempts. Wait a minute, then try again.',
 }
 const CODE_ERROR = 'That code didn’t work. Use the newest code in your app.'
+const RECOVERY_ERROR = 'That recovery code didn’t work. Each one works only once.'
 
 export default function SignIn() {
   const { refresh } = useAuth()
   const { state } = useLocation()
   const [email, setEmail] = useState(state?.email ?? '')
   const [password, setPassword] = useState('')
-  const [step, setStep] = useState('password') // 'password' | 'code'
+  const [step, setStep] = useState('password') // 'password' | 'code' | 'recovery'
   const [code, setCode] = useState('')
   const [trustDevice, setTrustDevice] = useState(false)
   const [codeError, setCodeError] = useState('')
@@ -48,20 +49,24 @@ export default function SignIn() {
     }
   }
 
+  // The second step: the app's code, or a recovery code for a lost phone
   async function handleCode(e) {
     e.preventDefault()
+    const recovery = step === 'recovery'
     setBusy(true)
     setError('')
     setCodeError('')
     try {
-      const res = await postJson('/api/auth/login/2fa', { code, trustDevice })
+      const res = recovery
+        ? await postJson('/api/auth/login/recovery', { code })
+        : await postJson('/api/auth/login/2fa', { code, trustDevice })
       if (res.ok) {
         await refresh()
         return
       }
       if (res.status === 400) {
         setCode('')
-        setCodeError(fieldErrors(res.data).code ?? CODE_ERROR)
+        setCodeError(fieldErrors(res.data).code ?? (recovery ? RECOVERY_ERROR : CODE_ERROR))
       } else if (res.status === 401) {
         startOver(res.data?.title ?? 'Your sign-in timed out. Enter your email and password again.')
       } else {
@@ -74,11 +79,46 @@ export default function SignIn() {
     }
   }
 
+  function switchTo(next) {
+    setStep(next)
+    setCode('')
+    setCodeError('')
+    setError('')
+  }
+
   function startOver(message = '') {
     setStep('password')
     setCode('')
     setCodeError('')
     setError(message)
+  }
+
+  if (step === 'recovery') {
+    return (
+      <AuthLayout topLink={topLink}>
+        <p className="auth-eyebrow">Two-factor sign-in</p>
+        <h1 className="auth-title">Use a recovery code</h1>
+        <p className="auth-lede">Enter one of the recovery codes you saved when you turned on two-factor sign-in. It looks like ABCDE-FGHJK.</p>
+
+        {error && <p className="notice notice--error" role="alert">{error}</p>}
+
+        <form className="auth-fields" onSubmit={handleCode}>
+          <TextField id="recovery" label="Recovery code" value={code} onChange={setCode} error={codeError}
+            autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={32} autoFocus required />
+          <button className="btn-primary" type="submit" disabled={busy}>
+            {busy ? 'Checking…' : 'Sign in'}<ArrowRight size={16} />
+          </button>
+        </form>
+        <div className="auth-links">
+          <button type="button" className="auth-back" onClick={() => switchTo('code')}><ArrowLeft size={14} />Use the code from my app</button>
+        </div>
+
+        <div className="auth-note">
+          <Key size={18} />
+          <span>Each recovery code works once. When you’re in, go to Security to set up your new phone.</span>
+        </div>
+      </AuthLayout>
+    )
   }
 
   if (step === 'code') {
@@ -104,7 +144,10 @@ export default function SignIn() {
             {busy ? 'Checking…' : 'Verify'}<ArrowRight size={16} />
           </button>
         </form>
-        <button type="button" className="auth-back" onClick={() => startOver()}><ArrowLeft size={14} />Back to email and password</button>
+        <div className="auth-links">
+          <button type="button" className="auth-back" onClick={() => switchTo('recovery')}><Key size={14} />Lost your phone? Use a recovery code</button>
+          <button type="button" className="auth-back" onClick={() => startOver()}><ArrowLeft size={14} />Back to email and password</button>
+        </div>
 
         <div className="auth-note">
           <DeviceMobile size={18} className="ok" />

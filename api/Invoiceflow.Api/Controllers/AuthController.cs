@@ -7,13 +7,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
+using System.Security.Claims;
+using Invoiceflow.Api.Auth;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Invoiceflow.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
 public class AuthController(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn,
-    IMailer mailer, IConfiguration config, ILogger<AuthController> logger) : ControllerBase
+    IMailer mailer, IConfiguration config, RecoveryCodes recoveryCodes, ILogger<AuthController> logger) : ControllerBase
 {
     // One message for every bad link, so nothing can be learned from it
     const string BadLink = "This link is invalid or has expired.";
@@ -159,6 +162,39 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
         return ValidationProblem(ModelState);
     }
 
+    // POST /api/auth/login/recovery: a recovery code instead of the app's code, for a lost phone.
+    // Same 5-minute password step and same lockout as the app's code. Each code works once.
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("login/recovery")]
+    public async Task<IActionResult> LoginRecovery(RecoveryCodeInput input)
+    {
+        var user = await signIn.GetTwoFactorAuthenticationUserAsync();
+        if (user is null)
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Your sign-in timed out. Enter your email and password again.");
+        if (await users.IsLockedOutAsync(user)) return await LockedOut();
+
+        if (!await recoveryCodes.RedeemAsync(user, input.Code))
+        {
+            await users.AccessFailedAsync(user); // counts towards the same 5-strike lockout
+            if (await users.IsLockedOutAsync(user)) return await LockedOut();
+            ModelState.AddModelError(nameof(input.Code), "That recovery code didn't work. Each one works only once.");
+            return ValidationProblem(ModelState);
+        }
+
+        await users.ResetAccessFailedCountAsync(user);
+        await HttpContext.SignOutAsync(IdentityConstants.TwoFactorUserIdScheme); // the 5-minute cookie is done with
+        await signIn.SignInWithClaimsAsync(user, isPersistent: false, [new Claim("amr", "mfa")]);
+        logger.LogInformation("User {UserId} signed in with a recovery code", user.Id);
+        return NoContent();
+    }
+
+    async Task<IActionResult> LockedOut()
+    {
+        await signIn.SignOutAsync();
+        return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Too many wrong codes. Sign-in is locked for 15 minutes.");
+    }
+
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
@@ -172,7 +208,9 @@ public class AuthController(UserManager<ApplicationUser> users, SignInManager<Ap
     public async Task<ActionResult<MeDto>> Me()
     {
         var user = await users.GetUserAsync(User);
-        return user is null ? Unauthorized() : new MeDto(user.Email!, user.FullName, user.BusinessName, user.EmailConfirmed, user.TwoFactorEnabled); 
+        if (user is null) return Unauthorized();
+        var codesLeft = user.TwoFactorEnabled ? await recoveryCodes.RemainingAsync(user.Id) : 0;
+        return new MeDto(user.Email!, user.FullName, user.BusinessName, user.EmailConfirmed, user.TwoFactorEnabled, codesLeft);
     }
 
     // Links carry a signed token made for this account. They're never logged.

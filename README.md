@@ -19,7 +19,7 @@ Create invoices, send them with signed payment links, get paid by card, and see 
 
 - [x] Secure cookie sessions with account lockout
 - [x] Per-user data isolation (IDOR protection), covered by automated tests
-- [ ] Two-factor sign-in (TOTP) with recovery codes
+- [x] Two-factor sign-in (TOTP) with recovery codes
 - [x] Signed, expiring payment links (HMAC-SHA256)
 - [x] Verified Stripe webhooks
 - [x] Email verification before an account can send invoices
@@ -120,6 +120,7 @@ Uses a separate `InvoiceflowTest` database that is deleted and rebuilt on every 
 | 37 | Nov 24 | Password reset: single-use 1-hour links that sign out every old session |
 | 38 | Nov 25 | Two-factor setup: authenticator app QR code, password and code checks |
 | 39 | Nov 26 | Two-factor sign-in: one-time codes, 5-strike lockout, trusted devices for 30 days |
+| 40 | Nov 27 | Recovery codes: 10 single-use backup codes, shown once and stored hashed |
 ## Author
 
 Adeniyi Richard Adedokun, full stack developer & cybersecurity analyst
